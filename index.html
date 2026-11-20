@@ -1720,12 +1720,21 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
   }
 
   // ---------- Lista ----------
-  function qtToOrder(x){
-    var ref=db.collection('orders').doc(),c=qtCalc(x);
-    var desc='Para: '+x.client+'\n'+(x.items||[]).map(function(i){return qfmt(i.qty)+' × '+i.name}).join('\n');
-    ref.set({name:x.client+(x.title?' · '+x.title:''),desc:desc,priceQ:c.total,status:'pend',createdAt:new Date().toISOString(),incomeId:null,quoteId:x.id})
-      .then(function(){return db.doc('quotes/'+x.id).update({status:'aceptada',orderId:ref.id})})
-      .then(function(){ordTab='ped';ordOpen[ref.id]=true;toast('Pedido creado desde la cotización');render();window.scrollTo(0,0)}).catch(fail);
+  // Confirmar = el cliente aceptó. Si hay anticipo, primero confirmas que ya lo recibiste: entra a tu saldo y nace el pedido en Pendiente
+  function qtConfirm(x){
+    var c=qtCalc(x),dep=(x.depOn&&c.dep>0)?c.dep:0;
+    function go(){
+      var now=new Date().toISOString(),ref=db.collection('orders').doc(),name=x.client+(x.title?' · '+x.title:'');
+      var desc='Para: '+x.client+'\n'+(x.items||[]).map(function(i){return qfmt(i.qty)+' × '+i.name}).join('\n');
+      var rec={name:name,desc:desc,priceQ:c.total,status:'pend',createdAt:now,incomeId:null,quoteId:x.id,depositQ:dep,depositIncomeId:null};
+      var ch=Promise.resolve();
+      if(dep>0){var iref=db.collection('incomes').doc();rec.depositIncomeId=iref.id;ch=iref.set({concept:'Anticipo · '+name,amountQ:dep,date:todayStr(),createdAt:now,orderId:ref.id,deposit:true})}
+      ch.then(function(){return ref.set(rec)})
+        .then(function(){return db.doc('quotes/'+x.id).update({status:'aceptada',orderId:ref.id})})
+        .then(function(){ordTab='ped';ordFil='act';ordOpen[ref.id]=true;toast(dep>0?'¡Confirmada! Anticipo de '+q(dep)+' sumado a tu saldo':'¡Confirmada! El pedido empieza como Pendiente');render();window.scrollTo(0,0)}).catch(fail);
+    }
+    if(dep>0)confirmBox('¿Ya recibiste el anticipo?','Confirma que "'+x.client+'" ya te dio el anticipo de '+q(dep)+' ('+qfmt(c.rp)+' %). Se suma a tu saldo y el pedido empieza como Pendiente.','Sí, ya lo recibí',go);
+    else go();
   }
   function qtRow(x){
     var open=!!qtOpen[x.id],c=qtCalc(x),st=QST[qst(x)];
@@ -1741,18 +1750,24 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     if(c.dp>0)d.appendChild(el('div',{class:'qline meta'},[el('span',{text:'Descuento ('+qfmt(c.dp)+' %)'}),el('span',{text:'− '+q(c.da)})]));
     d.appendChild(el('div',{class:'salesum'},[el('span',{},['Total ',el('b',{text:q(c.total)})]),c.rp>0?el('span',{},['Anticipo ('+qfmt(c.rp)+' %) ',el('b',{text:q(c.dep)})]):el('span',{text:'Sin anticipo'})]));
     d.appendChild(el('button',{type:'button',class:'btn primary big',text:'Ver y descargar PDF',onclick:function(){qtPdfView(x)}}));
-    d.appendChild(el('div',{class:'meta',style:'font-weight:800',text:'Estado'}));
-    var ch=el('div',{class:'chipsel'});
-    Object.keys(QST).forEach(function(k){ch.appendChild(el('button',{type:'button',class:'opt-chip'+(qst(x)===k?' on':''),text:QST[k][0],onclick:function(){if(qst(x)!==k)db.doc('quotes/'+x.id).update({status:k}).catch(fail)}}))});
-    d.appendChild(ch);
     var linked=x.orderId&&orders.find(function(o){return o.id===x.orderId});
+    if(linked){
+      d.appendChild(el('div',{class:'meta',style:'font-weight:800;color:var(--ok)',text:'Aceptada · ya es el pedido "'+linked.name+'"'}));
+    }else{
+      d.appendChild(el('div',{class:'meta',style:'font-weight:800',text:'Estado'}));
+      var ch=el('div',{class:'chipsel'});
+      ['nueva','enviada','rechazada'].forEach(function(k){ch.appendChild(el('button',{type:'button',class:'opt-chip'+(qst(x)===k?' on':''),text:QST[k][0],onclick:function(){if(qst(x)!==k)db.doc('quotes/'+x.id).update({status:k}).catch(fail)}}))});
+      d.appendChild(ch);
+    }
     var acts=el('div',{class:'row'});
-    if(linked)acts.appendChild(el('button',{type:'button',class:'btn',text:'Ver pedido',onclick:function(){ordTab='ped';ordOpen[linked.id]=true;render();window.scrollTo(0,0)}}));
-    else acts.appendChild(el('button',{type:'button',class:'btn',text:'Convertir en pedido',onclick:function(){qtToOrder(x)}}));
-    acts.appendChild(el('button',{type:'button',class:'btn',text:'Editar',onclick:function(){
-      qtAdd={id:x.id,title:x.title||'',client:x.client||'',days:x.days==null?'':String(x.days),disc:x.disc?String(x.disc):'',depOn:!!x.depOn,depPct:String(x.depPct||50),del:[],
-        items:(x.items||[]).map(function(i){return {name:i.name,desc:i.desc||'',qty:String(i.qty),price:String(i.price),photo:null,photoId:i.photoId||null}})};
-      render();window.scrollTo(0,0)}}));
+    if(linked)acts.appendChild(el('button',{type:'button',class:'btn primary',text:'Ver pedido',onclick:function(){ordTab='ped';ordOpen[linked.id]=true;render();window.scrollTo(0,0)}}));
+    else{
+      acts.appendChild(el('button',{type:'button',class:'btn primary',text:'Confirmar cotización',onclick:function(){qtConfirm(x)}}));
+      acts.appendChild(el('button',{type:'button',class:'btn',text:'Editar',onclick:function(){
+        qtAdd={id:x.id,title:x.title||'',client:x.client||'',days:x.days==null?'':String(x.days),disc:x.disc?String(x.disc):'',depOn:!!x.depOn,depPct:String(x.depPct||50),del:[],
+          items:(x.items||[]).map(function(i){return {name:i.name,desc:i.desc||'',qty:String(i.qty),price:String(i.price),photo:null,photoId:i.photoId||null}})};
+        render();window.scrollTo(0,0)}}));
+    }
     d.appendChild(acts);
     d.appendChild(delBtn('Borrar cotización',function(){
       (x.items||[]).forEach(function(i){if(i.photoId){PH.del(i.photoId);delete photoCache[i.photoId]}});
@@ -1981,11 +1996,14 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
   var pgOpen=false, orders=[], ordAdd=null, ordOpen={}, ordFil='act';
   var OST={pend:['Pendiente','pend'],imprimiendo:['Imprimiendo','printing'],listo:['Listo para entregar','ready'],entregado:['Entregado','done']};
   function ost(o){return OST[o.status]?o.status:'pend'}
+  function ordDep(o){return qr2(o.depositQ||0)}
+  function ordRest(o){return Math.max(0,qr2((o.priceQ||0)-ordDep(o)))}
   // El dinero del pedido entra a tus números SOLO cuando lo marcas entregado
   function setOrderStatus(o,st){
     var ch=Promise.resolve(),upd={status:st};
-    if(st==='entregado'&&!o.incomeId){var iref=db.collection('incomes').doc();upd.incomeId=iref.id;upd.deliveredAt=new Date().toISOString();
-      ch=iref.set({concept:o.name,amountQ:o.priceQ,date:todayStr(),createdAt:upd.deliveredAt,orderId:o.id})}
+    if(st==='entregado'&&ost(o)!=='entregado'){upd.deliveredAt=new Date().toISOString();var rest=ordRest(o);
+      if(rest>0){var iref=db.collection('incomes').doc();upd.incomeId=iref.id;
+        ch=iref.set({concept:o.name,amountQ:rest,date:todayStr(),createdAt:upd.deliveredAt,orderId:o.id})}}
     if(st!=='entregado'&&o.incomeId){var old=o.incomeId;upd.incomeId=null;ch=db.doc('incomes/'+old).delete()}
     return ch.then(function(){return db.doc('orders/'+o.id).update(upd)});
   }
@@ -2029,7 +2047,21 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
       var v=Math.round((parseFloat(S.price)||0)*100)/100;if(!(v>0))return toast('Escribe en cuánto lo vas a vender');
       var data={name:S.name.trim()||('Pedido '+(orders.length+1)),desc:S.desc.trim(),priceQ:v};
       var p;
-      if(S.id){p=db.doc('orders/'+S.id).update(data);if(S.incomeId)p=p.then(function(){return db.doc('incomes/'+S.incomeId).update({amountQ:v,concept:data.name})})}
+      if(S.id){
+        var o0=orders.find(function(x){return x.id===S.id});p=db.doc('orders/'+S.id).update(data);
+        if(o0)p=p.then(function(){
+          var rest=Math.max(0,qr2(v-ordDep(o0))),ch2=Promise.resolve();
+          if(o0.depositIncomeId)ch2=ch2.then(function(){return db.doc('incomes/'+o0.depositIncomeId).update({concept:'Anticipo · '+data.name})});
+          if(o0.incomeId){
+            if(rest>0)ch2=ch2.then(function(){return db.doc('incomes/'+o0.incomeId).update({amountQ:rest,concept:data.name})});
+            else ch2=ch2.then(function(){return db.doc('incomes/'+o0.incomeId).delete()}).then(function(){return db.doc('orders/'+S.id).update({incomeId:null})});
+          }else if(ost(o0)==='entregado'&&rest>0){
+            var iref=db.collection('incomes').doc();
+            ch2=ch2.then(function(){return iref.set({concept:data.name,amountQ:rest,date:todayStr(),createdAt:new Date().toISOString(),orderId:S.id})}).then(function(){return db.doc('orders/'+S.id).update({incomeId:iref.id})});
+          }
+          return ch2;
+        });
+      }
       else{data.status='pend';data.createdAt=new Date().toISOString();data.incomeId=null;p=db.collection('orders').doc().set(data)}
       p.then(function(){toast(S.id?'Pedido actualizado':'¡Pedido guardado!');ordAdd=null;render()}).catch(fail)});
     return f;
@@ -2048,6 +2080,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
       ps.forEach(function(p){var dots=el('span',{class:'fdots'});(p.lines||[]).forEach(function(l){var i=el('i');i.style.background=l.colorHex||'var(--line)';dots.appendChild(i)});
         d.appendChild(el('div',{class:'oprint'},[dots,el('span',{text:p.name||'Impresión'}),el('small',{text:new Date(p.createdAt).toLocaleDateString('es-GT',{day:'numeric',month:'short'})+' · '+gr(p.totalG||0)+' g'})]))});
       if(ps.length)d.appendChild(el('div',{class:'salesum'},[el('span',{},['Impresiones ',el('b',{style:'color:var(--ink)',text:String(ps.length)})]),el('span',{},['Gramos ',el('b',{style:'color:var(--ink)',text:gr(g)+' g'})])]));
+      if(ordDep(o)>0)d.appendChild(el('div',{class:'salesum'},[el('span',{},['Anticipo recibido ',el('b',{text:q(ordDep(o))})]),el('span',{},['Falta cobrar ',el('b',{text:q(ordRest(o))})])]));
       // Los estados pasan solos. Lo único que tú controlas es "Entregado", con confirmación
       var cur=ost(o),order=['pend','imprimiendo','listo','entregado'],ci=order.indexOf(cur);
       var steps=el('div',{class:'osteps'});
@@ -2056,19 +2089,20 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
       d.appendChild(el('div',{class:'meta',text:{
         pend:'Pasa solo a Imprimiendo cuando enlaces una impresión a este pedido.',
         imprimiendo:'Pasa solo a Listo para entregar cuando termine de imprimirse.',
-        listo:'Cuando se lo des al cliente, márcalo como entregado. Ahí su dinero entra a tu saldo.',
+        listo:'Cuando se lo des al cliente, márcalo como entregado.'+(ordRest(o)>0?' Ahí entra a tu saldo lo que falta cobrar.':''),
         entregado:'Entregado: sus '+q(o.priceQ)+' ya están en tu saldo, tus números y tu historial.'}[cur]}));
       var acts=el('div',{class:'row'});
       if(cur==='listo')acts.appendChild(el('button',{class:'btn primary',text:'Marcar como entregado',onclick:function(){
-        confirmBox('¿Ya fue entregado?','Confirma que "'+o.name+'" ya se lo diste al cliente. Se suman '+q(o.priceQ)+' a tu saldo, a tus números y a tu historial.','Sí, ya se entregó',function(){
-          setOrderStatus(o,'entregado').then(function(){toast('¡Entregado! '+q(o.priceQ)+' sumados a tu saldo')}).catch(fail)})}}));
+        confirmBox('¿Ya fue entregado?','Confirma que "'+o.name+'" ya se lo diste al cliente. '+(ordRest(o)>0?'Se suman '+q(ordRest(o))+(ordDep(o)>0?' (lo que faltaba; el anticipo de '+q(ordDep(o))+' ya estaba en tu saldo)':'')+' a tu saldo, a tus números y a tu historial.':'Ya estaba pagado completo con el anticipo.'),'Sí, ya se entregó',function(){
+          setOrderStatus(o,'entregado').then(function(){toast(ordRest(o)>0?'¡Entregado! '+q(ordRest(o))+' sumados a tu saldo':'¡Entregado!')}).catch(fail)})}}));
       if(cur==='entregado')acts.appendChild(el('button',{class:'btn',text:'Quitar entregado',onclick:function(){
-        confirmBox('¿Quitar el entregado?','El pedido vuelve a "Listo para entregar" y se quita su venta de '+q(o.priceQ)+' de tus números.','Sí, quitar',function(){
+        confirmBox('¿Quitar el entregado?','El pedido vuelve a "Listo para entregar" y '+(o.incomeId?'se quita su cobro de '+q(ordRest(o))+' de tus números.':'no cambia tu saldo.'),'Sí, quitar',function(){
           setOrderStatus(o,'listo').then(function(){toast('Volvió a Listo para entregar')}).catch(fail)})}}));
       acts.appendChild(el('button',{class:'btn',text:'Editar',onclick:function(){ordAdd={id:o.id,name:o.name,desc:o.desc||'',price:String(o.priceQ),incomeId:o.incomeId};render();window.scrollTo(0,0)}}));
       d.appendChild(acts);
       d.appendChild(delBtn('Borrar pedido',function(){
         var ch=Promise.resolve();if(o.incomeId)ch=ch.then(function(){return db.doc('incomes/'+o.incomeId).delete()});
+        if(o.depositIncomeId)ch=ch.then(function(){return db.doc('incomes/'+o.depositIncomeId).delete()});
         ps.forEach(function(p){ch=ch.then(function(){return db.doc('prints/'+p.id).update({orderId:null})})});
         ch.then(function(){return db.doc('orders/'+o.id).delete()}).then(function(){toast('Pedido borrado')}).catch(fail)}));
       row.appendChild(d);
@@ -2084,7 +2118,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     var act=orders.filter(function(o){return ost(o)!=='entregado'});
     var kp=el('div',{class:'stats2'});
     kp.appendChild(statTile(String(act.length),act.length===1?'pedido sin entregar':'pedidos sin entregar','var(--o)'));
-    kp.appendChild(statTile(q(act.reduce(function(a,o){return a+(o.priceQ||0)},0)),'por cobrar al entregar','var(--g)'));
+    kp.appendChild(statTile(q(act.reduce(function(a,o){return a+ordRest(o)},0)),'por cobrar al entregar','var(--g)'));
     root.appendChild(kp);
     var cnt=function(k){return orders.filter(function(o){return ost(o)===k}).length};
     root.appendChild(perChips(ordFil,function(v){ordFil=v},[['act','Activos ('+act.length+')'],['pend','Pendientes ('+cnt('pend')+')'],['imprimiendo','Imprimiendo ('+cnt('imprimiendo')+')'],['listo','Listos ('+cnt('listo')+')'],['entregado','Entregados ('+cnt('entregado')+')'],['todo','Todos']]));
@@ -2302,7 +2336,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
           d.appendChild(r);
         });
       }
-      sec('QUÉ VENDÍ · '+q(c.ventas),'var(--ok)',c.vItems,'+',function(x){var pr=prints.find(function(p){return p.incomeId===x.id}),od=orders.find(function(o){return o.incomeId===x.id});db.doc('incomes/'+x.id).delete().then(function(){return pr?db.doc('prints/'+pr.id).update({saleQ:null,incomeId:null}):null}).then(function(){return od?db.doc('orders/'+od.id).update({incomeId:null,status:'listo'}):null}).then(function(){toast('Borrado')}).catch(fail)});
+      sec('QUÉ VENDÍ · '+q(c.ventas),'var(--ok)',c.vItems,'+',function(x){var pr=prints.find(function(p){return p.incomeId===x.id}),od=orders.find(function(o){return o.incomeId===x.id}),dd=orders.find(function(o){return o.depositIncomeId===x.id});db.doc('incomes/'+x.id).delete().then(function(){return pr?db.doc('prints/'+pr.id).update({saleQ:null,incomeId:null}):null}).then(function(){return od?db.doc('orders/'+od.id).update({incomeId:null,status:'listo'}):null}).then(function(){return dd?db.doc('orders/'+dd.id).update({depositIncomeId:null,depositQ:0}):null}).then(function(){toast('Borrado')}).catch(fail)});
       sec('QUÉ GASTÉ · '+q(c.gastos),'var(--bad)',c.gItems,'-',function(x){db.doc('expenses/'+x.id).delete().then(function(){if(x.ph)PH.del(x.ph);toast('Borrado')}).catch(fail)});
       d.appendChild(el('div',{class:'cuttot'},[el('span',{text:'GANANCIA'}),el('b',{style:'color:'+gcol,text:(c.ganancia<0?'-':'')+q(Math.abs(c.ganancia))})]));
       d.appendChild(el('div',{class:'meta',text:'Filamento usado: '+fmtG(c.gramos)+' en '+c.nImp+(c.nImp===1?' impresión':' impresiones')}));
