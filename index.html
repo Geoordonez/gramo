@@ -364,6 +364,8 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
 
 .stats{grid-template-columns:1fr .8fr 1.3fr;gap:10px}
 .obadge.ready{color:#D9A400}
+.pgbtn{justify-self:start}
+.pgdet{display:grid;gap:8px}
 
 </style></head><body>
 <div class="wrap">
@@ -1513,13 +1515,14 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     var pc=el('div',{class:'card pergram'},[
       el('small',{text:'GANANCIA POR GRAMO'}),
       el('b',{style:pg<0?'color:var(--bad)':'',text:gram>0?(pg<0?'-':'')+q(Math.abs(pg))+' / g':'—'}),
-      el('div',{class:'formula'},gram>0?[el('span',{text:(gan<0?'-':'')+q(Math.abs(gan))}),el('i',{text:'÷'}),el('span',{text:gr(gram)+' g'}),el('i',{text:'='}),el('span',{text:(pg<0?'-':'')+q(Math.abs(pg))})]:[]),
-      el('div',{class:'meta',text:gram>0?'Ganancia del periodo (ventas − gastos) dividida entre los gramos que imprimiste en ese mismo periodo. Por cada gramo de filamento que usas te quedan '+q(Math.abs(pg))+(pg<0?' de pérdida.':' limpios.'):'Cuando descuentes impresiones en este periodo, aquí ves cuánto te deja cada gramo.'})]);
+      gram>0?el('button',{type:'button',class:'btn ghost pgbtn','aria-expanded':pgOpen?'true':'false',text:pgOpen?'Ocultar detalles':'Ver detalles',onclick:function(){pgOpen=!pgOpen;render()}}):el('div',{class:'meta',text:'Cuando descuentes impresiones en este periodo, aquí ves cuánto te deja cada gramo.'}),
+      gram>0&&pgOpen?el('div',{class:'pgdet'},[el('div',{class:'formula'},gram>0?[el('span',{text:(gan<0?'-':'')+q(Math.abs(gan))}),el('i',{text:'÷'}),el('span',{text:gr(gram)+' g'}),el('i',{text:'='}),el('span',{text:(pg<0?'-':'')+q(Math.abs(pg))})]:[]),
+      el('div',{class:'meta',text:gram>0?'Ganancia del periodo (ventas − gastos) dividida entre los gramos que imprimiste en ese mismo periodo. Por cada gramo de filamento que usas te quedan '+q(Math.abs(pg))+(pg<0?' de pérdida.':' limpios.'):'Cuando descuentes impresiones en este periodo, aquí ves cuánto te deja cada gramo.'})]):null]);
     root.appendChild(pc);
   }
 
   // ================= Pedidos =================
-  var orders=[], ordAdd=null, ordOpen={}, ordFil='act';
+  var pgOpen=false, orders=[], ordAdd=null, ordOpen={}, ordFil='act';
   var OST={pend:['Pendiente','pend'],imprimiendo:['Imprimiendo','printing'],listo:['Listo para entregar','ready'],entregado:['Entregado','done']};
   function ost(o){return OST[o.status]?o.status:'pend'}
   // El dinero del pedido entra a tus números SOLO cuando lo marcas entregado
