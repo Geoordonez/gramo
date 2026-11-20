@@ -22,7 +22,9 @@
         x5:{concept:'Bobina PLA Matte · Sky Blue',amountQ:195,date:iso(now-2*D).slice(0,10),kind:'Filamento',spoolId:'e'},x6:{concept:'Argollas llaveros',desc:'500 argollas de 25 mm, zona 4',amountQ:85,date:iso(now-12*D).slice(0,10),kind:'Otro'},
         x7:{concept:'Envío de pedido a Xela',amountQ:35,date:iso(now-6*D).slice(0,10),kind:'Envíos'},x8:{concept:'Argollas llaveros',desc:'300 argollas',amountQ:55,date:iso(now-1*D).slice(0,10),kind:'Otro'},x9:{concept:'Cinta doble cara',amountQ:28,date:iso(now-25*D).slice(0,10),kind:'Otro'}};
       var inc={i1:{concept:'50 llaveros Cross Nails',amountQ:650,date:iso(now-20*D).slice(0,10)},i2:{concept:'12 billetes de Bob Esponja',amountQ:720,date:iso(now-11*D).slice(0,10)},i3:{concept:'Lagartijas (6)',amountQ:360,date:iso(now-5*D).slice(0,10)},i4:{concept:'Llavero con logo (30)',amountQ:390,date:iso(now-1*D).slice(0,10)}};
-      localStorage.setItem(KEY,JSON.stringify({spools:sp,prints:pr,expenses:ex,incomes:inc}));
+      Object.keys(pr).forEach(function(k){var p=pr[k];if(rnd()<.25)return;var v=Math.round((p.totalG*(1.2+rnd()*1.6)+15)*100)/100;p.saleQ=v;p.incomeId='v'+k;inc['v'+k]={concept:p.name,amountQ:v,date:p.createdAt.slice(0,10),createdAt:p.createdAt,printId:k}});
+      var jobs={jdemo:{cloud:true,printerId:'',name:'Llaveros corazón x10',finishedAt:iso(now-20*60000),totalG:42.6,lines:[{g:28.4,color:'#C12E1F',label:'Red'},{g:14.2,color:'#FFFFFF',label:'Jade White'}],applied:false}};
+      localStorage.setItem(KEY,JSON.stringify({spools:sp,prints:pr,expenses:ex,incomes:inc,printerJobs:jobs}));
     }
   }catch(e){}
 })();

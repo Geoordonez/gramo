@@ -306,6 +306,21 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
 .fdots i{width:18px;height:18px;border-radius:50%;border:2px solid #161616;margin-left:-6px;display:block}
 .prow .fdots i{width:20px;height:20px}
 
+/* Precio de venta en cada impresión */
+.salebox{display:grid;gap:8px;margin:4px 0}
+.salebox .row{margin:0}
+.salebox input:disabled{opacity:.45}
+.salesum{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 12px;border:3px solid var(--edge);border-radius:12px;background:var(--bg);box-shadow:3px 3px 0 var(--g)}
+.salesum b{color:var(--ok);font-variant-numeric:tabular-nums}
+.pamt{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1}
+.pamt .sold{color:var(--ok)}
+.pamt .nos{color:var(--bad);font-size:13px;font-weight:800}
+.pamt small{font-size:12px;font-weight:700;opacity:.65}
+.salestat{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;padding:12px}
+.salestat small{display:block;font-size:10px;font-weight:800;letter-spacing:.6px;opacity:.65}
+.salestat b{font-size:19px;font-variant-numeric:tabular-nums}
+.salestat div:first-child b{color:var(--ok)}
+
 </style></head><body>
 <div class="wrap">
   <div class="hello">
@@ -930,8 +945,9 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     f.appendChild(box);
     if(lines.length<4)f.appendChild(el('div',{class:'row'},[el('button',{class:'btn',type:'button',text:'+ Otro color',onclick:function(){lines.push({spoolId:'',g:''});render()}})]));
     f.appendChild(el('div',{id:'pnote',class:'note'}));
+    f.appendChild(saleBox('mano'));
     f.appendChild(el('button',{class:'btn primary big',type:'submit',text:'Descontar del inventario'}));
-    f.addEventListener('submit',function(e){e.preventDefault();submitPrint($('p-name').value.trim(),lines.map(function(l){return {spoolId:l.spoolId,g:parseFloat(l.g)||0}}),null)});
+    f.addEventListener('submit',function(e){e.preventDefault();submitPrint($('p-name').value.trim(),lines.map(function(l){return {spoolId:l.spoolId,g:parseFloat(l.g)||0}}),null,'mano')});
     root.appendChild(f);updNote();
   }
   function updNote(){var n=$('pnote');if(!n)return;var msg=[];
@@ -939,15 +955,36 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     var c=lineCost(),tot=lines.reduce(function(a,l){return a+(parseFloat(l.g)||0)},0);
     n.textContent=(msg.join(' ')+(tot>0?' Total '+gr(tot)+' g'+(c>0?' · material '+q(c):''):'')).trim();
   }
-  function submitPrint(name,raw,extra){
+  // Caja "¿A cuánto lo vendiste?" que se pide en cada impresión
+  var saleSt={};
+  function saleBox(key){
+    var st=saleSt[key]||(saleSt[key]={price:'',none:false});
+    var inp=el('input',{type:'number',inputmode:'decimal',min:'0',step:'any',class:st.none?'':'imp',placeholder:'Ej. 85.50',value:st.price,disabled:st.none?'':null,'aria-label':'Precio de venta'});
+    inp.addEventListener('input',function(){st.price=inp.value});
+    var chip=el('button',{type:'button',class:'opt-chip'+(st.none?' on':''),text:'No fue venta',onclick:function(){st.none=!st.none;if(st.none)st.price='';render()}});
+    return el('div',{class:'salebox'},[el('label',{class:st.none?'':'req'},[st.none?'Sin venta (prueba, regalo o para mí)':'¿A cuánto lo vendiste? (Q) *',inp]),el('div',{class:'row'},[chip])]);
+  }
+  function saleOf(key){
+    var st=saleSt[key]||{price:'',none:false};
+    if(st.none)return 0;
+    var v=parseFloat(st.price);
+    if(!(v>0)){toast('Escribe a cuánto lo vendiste, o toca "No fue venta"');return null}
+    return Math.round(v*100)/100;
+  }
+  function submitPrint(name,raw,extra,saleKey){
     var items=raw.filter(function(l){return l.spoolId&&l.g>0&&byId(l.spoolId)});
     if(!items.length){toast('Elige una bobina y los gramos');return Promise.resolve(false)}
+    var sale=saleKey?saleOf(saleKey):0;
+    if(sale===null)return Promise.resolve(false);
     var rec={name:name||'Impresión',createdAt:new Date().toISOString(),totalG:0,costQ:0,lines:[]};
     if(extra)for(var k in extra)rec[k]=extra[k];
     items.forEach(function(it){var s=byId(it.spoolId);rec.totalG=Math.round((rec.totalG+it.g)*100)/100;rec.costQ=Math.round((rec.costQ+costG(s)*it.g)*100)/100;rec.lines.push({spoolId:s.id,label:s.name,colorHex:s.colorHex,g:it.g})});
-    var chain=db.collection('prints').add(rec);
+    var pref=db.collection('prints').doc();
+    if(sale>0){var iref=db.collection('incomes').doc();rec.saleQ=sale;rec.incomeId=iref.id}
+    var chain=pref.set(rec);
+    if(sale>0)chain=chain.then(function(){return iref.set({concept:rec.name,amountQ:sale,date:todayStr(),createdAt:rec.createdAt,printId:pref.id})});
     items.forEach(function(it){chain=chain.then(function(){var s=byId(it.spoolId);s.remainingG=Math.max(0,Math.round((s.remainingG-it.g)*100)/100);return db.doc('spools/'+s.id).update({remainingG:s.remainingG})})});
-    return chain.then(function(){if(!extra){lines=[{spoolId:'',g:''}];go('historial')}toast('¡Listo! Ya lo descontamos');render();return true}).catch(function(e){fail(e);return false});
+    return chain.then(function(){if(saleKey)delete saleSt[saleKey];if(!extra){lines=[{spoolId:'',g:''}];go('historial')}toast(sale>0?'¡Listo! Descontado y venta de '+q(sale)+' anotada':'¡Listo! Ya lo descontamos');render();return true}).catch(function(e){fail(e);return false});
   }
 
   // ---------------- Impresoras: conexión en vivo ----------------
@@ -1160,9 +1197,10 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
       el('div',{class:'meta',text:'Terminó '+ago(j.finishedAt)+' · Bambu dice '+gr(j.totalG||0)+' g'+(j.failed?' · también gastó filamento':'')}),
       box,
       el('div',{class:'meta',text:'Elige de qué bobina salió y corrige los gramos si hace falta.'}),
+      saleBox('j'+j.id),
       el('div',{class:'row'},[
-        el('button',{class:'btn primary',text:'Descontar',onclick:function(){
-          submitPrint(j.name||'Impresión',rows.map(function(r){return {spoolId:r.spoolId,g:r.g}}),{fromPrinter:pr.name,cloud:true}).then(function(ok){if(ok)db.doc('printerJobs/'+j.id).update({applied:true})})}}),
+        el('button',{class:'btn primary',text:'Confirmar',onclick:function(){
+          submitPrint(j.name||'Impresión',rows.map(function(r){return {spoolId:r.spoolId,g:r.g}}),{fromPrinter:pr.name,cloud:true},'j'+j.id).then(function(ok){if(ok)db.doc('printerJobs/'+j.id).update({applied:true})})}}),
         el('button',{class:'btn ghost',text:'Ignorar',onclick:function(){db.doc('printerJobs/'+j.id).update({applied:true})}})])]);
   }
   function vNube(root){
@@ -1231,15 +1269,16 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
       el('div',{class:'meta',text:'Terminó '+ago(j.finishedAt)}),
       rows.length?box:el('div',{class:'note',text:'Asigna qué bobina tiene cada ranura (abajo) para poder descontar.'}),
       rows.length?el('div',{class:'meta',text:hint}):null,
+      rows.length?saleBox('j'+j.id):null,
       el('div',{class:'row'},[
-        el('button',{class:'btn primary',text:'Descontar',onclick:function(){
-          submitPrint((j.name||'Impresión'),rows.map(function(r){return {spoolId:r.spoolId,g:parseFloat(r.g)||0}}),{fromPrinter:pr.name}).then(function(ok){if(ok)db.doc('printerJobs/'+j.id).update({applied:true})})}}),
+        el('button',{class:'btn primary',text:'Confirmar',onclick:function(){
+          submitPrint((j.name||'Impresión'),rows.map(function(r){return {spoolId:r.spoolId,g:parseFloat(r.g)||0}}),{fromPrinter:pr.name},'j'+j.id).then(function(ok){if(ok)db.doc('printerJobs/'+j.id).update({applied:true})})}}),
         el('button',{class:'btn ghost',text:'Ignorar',onclick:function(){db.doc('printerJobs/'+j.id).update({applied:true})}})])]);
   }
 
   function vImpresoras(root){
     var pend=jobs.filter(function(j){return !j.applied}).sort(function(a,b){return a.finishedAt<b.finishedAt?1:-1});
-    if(pend.length){root.appendChild(el('h2',{text:'Terminaron · falta descontar'}));pend.forEach(function(j){root.appendChild(jobCard(j))})}
+    if(pend.length){root.appendChild(el('h2',{text:'Terminaron · confírmalas'}));pend.forEach(function(j){root.appendChild(jobCard(j))})}
     if(NATIVE)vNube(root);
     root.appendChild(el('h2',{text:'Mis impresoras'}));
     if(!NATIVE)root.appendChild(emptyBox('La conexión con tus impresoras Bambu está en la app de Android. Aquí sí puedes llevar tus bobinas, gastos, ventas y números.'));
@@ -1499,8 +1538,19 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     });
     var bits=[];if(d.fromPrinter)bits.push('Impresora '+d.fromPrinter);if(d.costQ>0)bits.push('Material '+q(d.costQ));bits.push(new Date(d.createdAt).toLocaleTimeString('es-GT',{hour:'2-digit',minute:'2-digit'}));
     box.appendChild(el('div',{class:'meta',text:bits.join(' · ')}));
+    if(d.saleQ>0){
+      box.appendChild(el('div',{class:'salesum'},[el('span',{},['Vendido en ',el('b',{text:q(d.saleQ)})]),d.costQ>0?el('span',{},['Te quedó ',el('b',{text:q(d.saleQ-d.costQ)}),' sobre el material']):null]));
+    }else{
+      box.appendChild(saleBox('p'+d.id));
+      box.appendChild(el('button',{class:'btn',type:'button',text:'Guardar venta',onclick:function(){
+        var v=saleOf('p'+d.id);if(v===null)return;if(!(v>0)){delete saleSt['p'+d.id];render();return}
+        var iref=db.collection('incomes').doc();
+        iref.set({concept:d.name||'Impresión',amountQ:v,date:ymd(new Date(d.createdAt)),createdAt:new Date().toISOString(),printId:d.id})
+          .then(function(){return db.doc('prints/'+d.id).update({saleQ:v,incomeId:iref.id})}).then(function(){delete saleSt['p'+d.id];toast('Venta de '+q(v)+' anotada')}).catch(fail)}}));
+    }
     box.appendChild(delBtn('Borrar y devolver gramos',function(){
       var chain=Promise.resolve();
+      if(d.incomeId)chain=chain.then(function(){return db.doc('incomes/'+d.incomeId).delete()});
       (d.lines||[]).forEach(function(l){chain=chain.then(function(){var s=byId(l.spoolId);if(!s)return null;s.remainingG=Math.min(s.initialG,Math.round((s.remainingG+l.g)*100)/100);return db.doc('spools/'+s.id).update({remainingG:s.remainingG})})});
       chain.then(function(){return db.doc('prints/'+d.id).delete()}).then(function(){toast('Borrada, gramos devueltos')}).catch(fail)}));
     return box;
@@ -1509,13 +1559,19 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     root.appendChild(el('div',{class:'row'},[el('button',{class:'btn',text:'+ Impresión a mano',onclick:function(){go('imprimir')}})]));
     var items=prints.slice().sort(function(a,b){return new Date(b.createdAt)-new Date(a.createdAt)});
     if(!items.length){root.appendChild(emptyBox('Todavía no has impreso nada. Cuando descuentes una impresión, queda aquí con sus colores.'));return}
+    var pst=periodOf(periodEndFor(new Date())).start,inPer=items.filter(function(p){return ymd(new Date(p.createdAt))>=pst});
+    var vend=inPer.filter(function(p){return p.saleQ>0}),tot=vend.reduce(function(a,p){return a+p.saleQ},0);
+    root.appendChild(el('div',{class:'card salestat'},[
+      el('div',{},[el('small',{text:'VENDIDO DESDE EL 16'}),el('b',{text:q(tot)})]),
+      el('div',{},[el('small',{text:'IMPRESIONES'}),el('b',{text:String(inPer.length)})]),
+      el('div',{},[el('small',{text:'SIN PRECIO'}),el('b',{text:String(inPer.length-vend.length)})])]));
     var lastDay='',list=null;
     items.slice(0,150).forEach(function(d){
       var t=new Date(d.createdAt).getTime(),dl=dayLabel(t);
       if(dl!==lastDay){lastDay=dl;root.appendChild(el('div',{class:'dayh',text:dl}));list=el('div',{class:'hlist'});root.appendChild(list)}
       var id='p'+d.id,open=!!histOpen[id],n=(d.lines||[]).length;
       var row=el('div',{class:'hrow imp'+(open?' open':'')},[el('button',{type:'button',class:'hhead','aria-expanded':open?'true':'false',onclick:function(){histOpen[id]=!histOpen[id];render()}},[
-        el('span',{class:'hic'},[hIcon('imp')]),el('span',{class:'htx'},[el('b',{text:d.name||'Impresión'}),el('small',{text:n+(n===1?' color':' colores')+(d.fromPrinter?' · '+d.fromPrinter:'')})]),el('span',{class:'hamt',text:gr(d.totalG||0)+' g'})])]);
+        el('span',{class:'hic'},[hIcon('imp')]),el('span',{class:'htx'},[el('b',{text:d.name||'Impresión'}),el('small',{text:n+(n===1?' color':' colores')+(d.fromPrinter?' · '+d.fromPrinter:'')})]),el('span',{class:'hamt pamt'},[el('span',{class:d.saleQ>0?'sold':'nos',text:d.saleQ>0?q(d.saleQ):'Sin precio'}),el('small',{text:gr(d.totalG||0)+' g'})])])]);
       if(open)row.appendChild(printDetail(d));
       list.appendChild(row);
     });
@@ -1576,7 +1632,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
           d.appendChild(r);
         });
       }
-      sec('QUÉ VENDÍ · '+q(c.ventas),'var(--ok)',c.vItems,'+',function(x){db.doc('incomes/'+x.id).delete().then(function(){toast('Borrado')}).catch(fail)});
+      sec('QUÉ VENDÍ · '+q(c.ventas),'var(--ok)',c.vItems,'+',function(x){var pr=prints.find(function(p){return p.incomeId===x.id});db.doc('incomes/'+x.id).delete().then(function(){return pr?db.doc('prints/'+pr.id).update({saleQ:null,incomeId:null}):null}).then(function(){toast('Borrado')}).catch(fail)});
       sec('QUÉ GASTÉ · '+q(c.gastos),'var(--bad)',c.gItems,'-',function(x){db.doc('expenses/'+x.id).delete().then(function(){if(x.ph)PH.del(x.ph);toast('Borrado')}).catch(fail)});
       d.appendChild(el('div',{class:'cuttot'},[el('span',{text:'GANANCIA'}),el('b',{style:'color:'+gcol,text:(c.ganancia<0?'-':'')+q(Math.abs(c.ganancia))})]));
       d.appendChild(el('div',{class:'meta',text:'Filamento usado: '+fmtG(c.gramos)+' en '+c.nImp+(c.nImp===1?' impresión':' impresiones')}));
