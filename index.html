@@ -310,7 +310,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
 .salebox{display:grid;gap:8px;margin:4px 0}
 .salebox .row{margin:0}
 .salebox input:disabled{opacity:.45}
-.salesum{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 12px;border:3px solid var(--edge);border-radius:12px;background:var(--bg);box-shadow:3px 3px 0 var(--g)}
+.salesum{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 12px;border:3px solid var(--edge);border-radius:12px;background:var(--paper);box-shadow:3px 3px 0 var(--g)}
 .salesum b{color:var(--ok);font-variant-numeric:tabular-nums}
 .pamt{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1}
 .pamt .sold{color:var(--ok)}
@@ -320,6 +320,35 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
 .salestat small{display:block;font-size:10px;font-weight:800;letter-spacing:.6px;opacity:.65}
 .salestat b{font-size:19px;font-variant-numeric:tabular-nums}
 .salestat div:first-child b{color:var(--ok)}
+
+/* 6 pestañas */
+.nav{gap:1px;padding:4px}
+.nav button{font-size:8.6px;padding:7px 0 6px}
+.nav button svg{width:20px;height:20px}
+.nav [data-v=pedidos][aria-selected="true"]{background:var(--y)} .nav [data-v=gastos][aria-selected="true"]{background:var(--g)}
+/* Pedidos */
+.hrow.ped{--hc:var(--y)}
+.hrow.ped .hic{color:#161616;background:var(--y)}
+.hrow.ped .htx small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.obadge{font-weight:800!important;opacity:1!important;letter-spacing:.3px;text-transform:uppercase;font-size:10px!important}
+.obadge.pend{color:var(--o)} .obadge.paid{color:var(--ok)} .obadge.done{color:var(--muted)}
+.odesc{white-space:pre-wrap;font-weight:600}
+.oprint{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;font-weight:700}
+.oprint small{opacity:.7;font-variant-numeric:tabular-nums}
+.lockprice{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px;padding:10px 12px;border:3px solid var(--edge);border-radius:12px;background:var(--paper);box-shadow:3px 3px 0 var(--y)}
+.lockprice span{font-weight:800}
+.lockprice b{font-size:20px;color:var(--ok);font-variant-numeric:tabular-nums}
+.lockprice small{grid-column:1/-1;opacity:.7;font-weight:600}
+.pamt .ord{display:inline-flex;align-items:center;gap:4px}
+.pamt .ord svg{width:15px;height:15px}
+.salesum svg{width:16px;height:16px;vertical-align:-3px}
+/* Ganancia por gramo */
+.pergram{display:grid;gap:6px;box-shadow:4px 4px 0 var(--y)}
+.pergram small{font-family:var(--px);font-size:9px;letter-spacing:0}
+.pergram>b{font-size:34px;letter-spacing:-1px;color:var(--ok);font-variant-numeric:tabular-nums;line-height:1}
+.pergram .formula{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-weight:800;font-variant-numeric:tabular-nums}
+.pergram .formula span{padding:4px 8px;border:2px solid var(--edge);border-radius:8px;background:var(--paper)}
+.pergram .formula i{font-style:normal;opacity:.6}
 
 </style></head><body>
 <div class="wrap">
@@ -337,6 +366,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
 <nav class="nav" role="tablist" id="tabs">
   <button role="tab" data-v="bobinas" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>Bobinas</button>
   <button role="tab" data-v="impresoras" aria-selected="false"><span class="dot" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 15h8M10 9h4"/></svg>Impresoras</button>
+  <button role="tab" data-v="pedidos" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4v9l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v9M7.5 6l9 4"/></svg>Pedidos</button>
   <button role="tab" data-v="numeros" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><circle cx="11.5" cy="11.3" r="3.4"/><path d="M13.8 13.6l2.4 2.6"/></svg>Números</button>
   <button role="tab" data-v="gastos" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Gastos</button>
   <button role="tab" data-v="historial" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Historial</button>
@@ -369,7 +399,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
 
   var db=LDB, spools=[], prints=[], printers=[], jobs=[], loaded=false, view='bobinas', adjusting=null, showAdd=false;
   var lines=[{spoolId:'',g:''}];
-  var VIEWS=['bobinas','impresoras','numeros','gastos','historial','imprimir','yo'];
+  var VIEWS=['bobinas','impresoras','pedidos','numeros','gastos','historial','imprimir','yo'];
   var NATIVE=!!(window.Bambu&&window.Bambu.ok);
   var live={}, conn={};           // estado en vivo por número de serie (no se guarda)
   var adding=null;                 // flujo de "Agregar impresora"
@@ -957,34 +987,73 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
   }
   // Caja "¿A cuánto lo vendiste?" que se pide en cada impresión
   var saleSt={};
+  function openOrders(keep){return orders.filter(function(o){return o.status!=='entregado'||o.id===keep}).sort(function(a,b){return a.createdAt<b.createdAt?1:-1})}
   function saleBox(key){
-    var st=saleSt[key]||(saleSt[key]={price:'',none:false});
+    var st=saleSt[key]||(saleSt[key]={mode:'',orderId:'',price:'',none:false});
+    var ops=openOrders(st.orderId);
+    if(!ops.length&&st.mode==='')st.mode='free';
+    var wrap=el('div',{class:'salebox'});
+    wrap.appendChild(el('div',{class:'meta',style:'font-weight:800',text:'¿Es de un pedido?'}));
+    wrap.appendChild(el('div',{class:'row'},[
+      el('button',{type:'button',class:'opt-chip'+(st.mode==='order'?' on':''),text:'Enlazar pedido',onclick:function(){if(!ops.length)return toast('No tienes pedidos pendientes. Créalos en Pedidos.');st.mode='order';render()}}),
+      el('button',{type:'button',class:'opt-chip'+(st.mode==='free'?' on':''),text:'Sin pedido',onclick:function(){st.mode='free';st.orderId='';render()}})]));
+    if(!ops.length)wrap.appendChild(el('div',{class:'meta',text:'Tip: en la pestaña Pedidos anotas lo que te encargan y aquí lo enlazas.'}));
+    if(st.mode==='order'){
+      wrap.appendChild(el('label',{class:st.orderId?'':'req'},['¿De qué pedido es? *',fancySelect({value:st.orderId,title:'Enlazar con un pedido',placeholder:'Elegir pedido…',
+        options:ops.map(function(o){return {value:o.id,label:o.name,sub:(o.desc?o.desc.slice(0,40)+' · ':'')+q(o.priceQ)+(o.incomeId?' · ya cobrado':'')}}),
+        onChange:function(v){st.orderId=v;render()}})]));
+      var o=orders.find(function(x){return x.id===st.orderId});
+      if(o)wrap.appendChild(el('div',{class:'lockprice'},[el('span',{text:'Precio del pedido'}),el('b',{text:q(o.priceQ)}),
+        el('small',{text:o.incomeId?'Este pedido ya está cobrado: esta impresión solo suma su material.':'Se cambia solo en Pedidos.'})]));
+      return wrap;
+    }
+    if(st.mode!=='free')return wrap;
     var inp=el('input',{type:'number',inputmode:'decimal',min:'0',step:'any',class:st.none?'':'imp',placeholder:'Ej. 85.50',value:st.price,disabled:st.none?'':null,'aria-label':'Precio de venta'});
     inp.addEventListener('input',function(){st.price=inp.value});
     var chip=el('button',{type:'button',class:'opt-chip'+(st.none?' on':''),text:'No fue venta',onclick:function(){st.none=!st.none;if(st.none)st.price='';render()}});
-    return el('div',{class:'salebox'},[el('label',{class:st.none?'':'req'},[st.none?'Sin venta (prueba, regalo o para mí)':'¿A cuánto lo vendiste? (Q) *',inp]),el('div',{class:'row'},[chip])]);
+    wrap.appendChild(el('label',{class:st.none?'':'req'},[st.none?'Sin venta (prueba, regalo o para mí)':'¿A cuánto lo vendiste? (Q) *',inp]));
+    wrap.appendChild(el('div',{class:'row'},[chip]));
+    return wrap;
   }
+  // Devuelve {sale,orderId} o null si falta algo
   function saleOf(key){
-    var st=saleSt[key]||{price:'',none:false};
-    if(st.none)return 0;
+    var st=saleSt[key]||{mode:'',price:'',none:false};
+    if(st.mode===''){toast('Primero dime si es de un pedido o no');return null}
+    if(st.mode==='order'){if(!orders.some(function(o){return o.id===st.orderId})){toast('Elige el pedido');return null}return {sale:0,orderId:st.orderId}}
+    if(st.none)return {sale:0,orderId:''};
     var v=parseFloat(st.price);
     if(!(v>0)){toast('Escribe a cuánto lo vendiste, o toca "No fue venta"');return null}
-    return Math.round(v*100)/100;
+    return {sale:Math.round(v*100)/100,orderId:''};
+  }
+  // Anota el cobro (venta suelta o del pedido) y devuelve los campos para la impresión
+  function saleCommit(r,name,date,pid){
+    var now=new Date().toISOString();
+    if(r.orderId){
+      var o=orders.find(function(x){return x.id===r.orderId});if(!o)return Promise.resolve({});
+      if(o.incomeId)return Promise.resolve({orderId:o.id});
+      return chargeOrder(o,date).then(function(){return {orderId:o.id}});
+    }
+    if(r.sale>0){var iref=db.collection('incomes').doc();
+      return iref.set({concept:name,amountQ:r.sale,date:date,createdAt:now,printId:pid}).then(function(){return {saleQ:r.sale,incomeId:iref.id}})}
+    return Promise.resolve({});
+  }
+  function chargeOrder(o,date){
+    var iref=db.collection('incomes').doc();o.incomeId=iref.id;
+    return iref.set({concept:o.name,amountQ:o.priceQ,date:date||todayStr(),createdAt:new Date().toISOString(),orderId:o.id}).then(function(){return db.doc('orders/'+o.id).update({incomeId:iref.id})});
   }
   function submitPrint(name,raw,extra,saleKey){
     var items=raw.filter(function(l){return l.spoolId&&l.g>0&&byId(l.spoolId)});
     if(!items.length){toast('Elige una bobina y los gramos');return Promise.resolve(false)}
-    var sale=saleKey?saleOf(saleKey):0;
-    if(sale===null)return Promise.resolve(false);
+    var r=saleKey?saleOf(saleKey):{sale:0,orderId:''};
+    if(r===null)return Promise.resolve(false);
+    var sale=r.sale;
     var rec={name:name||'Impresión',createdAt:new Date().toISOString(),totalG:0,costQ:0,lines:[]};
     if(extra)for(var k in extra)rec[k]=extra[k];
     items.forEach(function(it){var s=byId(it.spoolId);rec.totalG=Math.round((rec.totalG+it.g)*100)/100;rec.costQ=Math.round((rec.costQ+costG(s)*it.g)*100)/100;rec.lines.push({spoolId:s.id,label:s.name,colorHex:s.colorHex,g:it.g})});
     var pref=db.collection('prints').doc();
-    if(sale>0){var iref=db.collection('incomes').doc();rec.saleQ=sale;rec.incomeId=iref.id}
-    var chain=pref.set(rec);
-    if(sale>0)chain=chain.then(function(){return iref.set({concept:rec.name,amountQ:sale,date:todayStr(),createdAt:rec.createdAt,printId:pref.id})});
+    var chain=saleCommit(r,rec.name,todayStr(),pref.id).then(function(f){for(var k in f)rec[k]=f[k];return pref.set(rec)});
     items.forEach(function(it){chain=chain.then(function(){var s=byId(it.spoolId);s.remainingG=Math.max(0,Math.round((s.remainingG-it.g)*100)/100);return db.doc('spools/'+s.id).update({remainingG:s.remainingG})})});
-    return chain.then(function(){if(saleKey)delete saleSt[saleKey];if(!extra){lines=[{spoolId:'',g:''}];go('historial')}toast(sale>0?'¡Listo! Descontado y venta de '+q(sale)+' anotada':'¡Listo! Ya lo descontamos');render();return true}).catch(function(e){fail(e);return false});
+    return chain.then(function(){if(saleKey)delete saleSt[saleKey];if(!extra){lines=[{spoolId:'',g:''}];go('historial')}var lo=r.orderId&&orders.find(function(o){return o.id===r.orderId});toast(lo?'¡Listo! Enlazada a '+lo.name:sale>0?'¡Listo! Descontado y venta de '+q(sale)+' anotada':'¡Listo! Ya lo descontamos');render();return true}).catch(function(e){fail(e);return false});
   }
 
   // ---------------- Impresoras: conexión en vivo ----------------
@@ -1428,6 +1497,77 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     tt.appendChild(statTile(q(ven),'VENTAS','var(--g)'));tt.appendChild(statTile(q(gas),'GASTOS','var(--p)'));
     var gt=statTile((gan<0?'-':'')+q(Math.abs(gan)),'GANANCIA',gan<0?'var(--bad)':'var(--b)');if(gan<0)gt.firstChild.style.color='var(--bad)';tt.appendChild(gt);
     root.appendChild(el('h2',{text:'Resumen del periodo'}));root.appendChild(tt);
+    var gram=sumPer(prints,numPer,function(p){return new Date(p.createdAt).getTime()},function(p){return p.totalG}),pg=gram>0?gan/gram:0;
+    var pc=el('div',{class:'card pergram'},[
+      el('small',{text:'GANANCIA POR GRAMO'}),
+      el('b',{style:pg<0?'color:var(--bad)':'',text:gram>0?(pg<0?'-':'')+q(Math.abs(pg))+' / g':'—'}),
+      el('div',{class:'formula'},gram>0?[el('span',{text:(gan<0?'-':'')+q(Math.abs(gan))}),el('i',{text:'÷'}),el('span',{text:gr(gram)+' g'}),el('i',{text:'='}),el('span',{text:(pg<0?'-':'')+q(Math.abs(pg))})]:[]),
+      el('div',{class:'meta',text:gram>0?'Ganancia del periodo (ventas − gastos) dividida entre los gramos que imprimiste en ese mismo periodo. Por cada gramo de filamento que usas te quedan '+q(Math.abs(pg))+(pg<0?' de pérdida.':' limpios.'):'Cuando descuentes impresiones en este periodo, aquí ves cuánto te deja cada gramo.'})]);
+    root.appendChild(pc);
+  }
+
+  // ================= Pedidos =================
+  var orders=[], ordAdd=null, ordOpen={}, ordFil='pend';
+  function ordPrints(o){return prints.filter(function(p){return p.orderId===o.id}).sort(function(a,b){return a.createdAt<b.createdAt?-1:1})}
+  function ordForm(){
+    var S=ordAdd,f=el('form',{class:'card'});
+    f.appendChild(el('h2',{text:S.id?'Editar pedido':'Nuevo pedido'}));
+    var nm=el('input',{required:'',placeholder:'Ej. Pedido '+(orders.length+1),value:S.name});nm.addEventListener('input',function(){S.name=nm.value});
+    var ds=el('textarea',{rows:'3',placeholder:'Ej. 50 llaveros Cross Nails, rosado con blanco, para el viernes'});ds.value=S.desc;ds.addEventListener('input',function(){S.desc=ds.value});
+    var pr=el('input',{type:'number',inputmode:'decimal',min:'0',step:'any',class:'imp',placeholder:'Ej. 50.00',value:S.price});pr.addEventListener('input',function(){S.price=pr.value});
+    f.appendChild(el('label',{},['Pedido',nm]));
+    f.appendChild(el('label',{},['Descripción',ds]));
+    f.appendChild(el('label',{class:'req'},['¿En cuánto lo vas a vender? (Q) *',pr]));
+    if(S.id&&S.incomeId)f.appendChild(el('div',{class:'meta',text:'Este pedido ya está cobrado. Si cambias el precio, también se corrige la venta en tus números.'}));
+    f.appendChild(el('div',{class:'row'},[el('button',{class:'btn primary big',type:'submit',text:S.id?'Guardar cambios':'Guardar pedido'}),el('button',{class:'btn ghost',type:'button',text:'Cancelar',onclick:function(){ordAdd=null;render()}})]));
+    f.addEventListener('submit',function(e){e.preventDefault();
+      var v=Math.round((parseFloat(S.price)||0)*100)/100;if(!(v>0))return toast('Escribe en cuánto lo vas a vender');
+      var data={name:S.name.trim()||('Pedido '+(orders.length+1)),desc:S.desc.trim(),priceQ:v};
+      var p;
+      if(S.id){p=db.doc('orders/'+S.id).update(data);if(S.incomeId)p=p.then(function(){return db.doc('incomes/'+S.incomeId).update({amountQ:v,concept:data.name})})}
+      else{data.status='pend';data.createdAt=new Date().toISOString();data.incomeId=null;p=db.collection('orders').doc().set(data)}
+      p.then(function(){toast(S.id?'Pedido actualizado':'¡Pedido guardado!');ordAdd=null;render()}).catch(fail)});
+    return f;
+  }
+  function ordRow(o){
+    var ps=ordPrints(o),open=!!ordOpen[o.id],g=ps.reduce(function(a,p){return a+(p.totalG||0)},0),mat=ps.reduce(function(a,p){return a+(p.costQ||0)},0);
+    var badge=o.status==='entregado'?['Entregado','done']:o.incomeId?['Cobrado','paid']:['Pendiente','pend'];
+    var row=el('div',{class:'hrow ped'+(open?' open':'')},[el('button',{type:'button',class:'hhead','aria-expanded':open?'true':'false',onclick:function(){ordOpen[o.id]=!open;render()}},[
+      el('span',{class:'hic'},[hIcon('ped')]),
+      el('span',{class:'htx'},[el('b',{text:o.name}),el('small',{text:(o.desc?o.desc:'Sin descripción')})]),
+      el('span',{class:'hamt pamt'},[el('span',{text:q(o.priceQ)}),el('small',{class:'obadge '+badge[1],text:badge[0]})])])]);
+    if(open){
+      var d=el('div',{class:'hdet'});
+      if(o.desc)d.appendChild(el('div',{class:'odesc',text:o.desc}));
+      d.appendChild(el('div',{class:'meta',style:'font-weight:800',text:ps.length?'Impresiones enlazadas ('+ps.length+')':'Todavía no has enlazado impresiones. Al confirmar una impresión, toca "Enlazar pedido".'}));
+      ps.forEach(function(p){var dots=el('span',{class:'fdots'});(p.lines||[]).forEach(function(l){var i=el('i');i.style.background=l.colorHex||'var(--line)';dots.appendChild(i)});
+        d.appendChild(el('div',{class:'oprint'},[dots,el('span',{text:p.name||'Impresión'}),el('small',{text:new Date(p.createdAt).toLocaleDateString('es-GT',{day:'numeric',month:'short'})+' · '+gr(p.totalG||0)+' g'})]))});
+      if(ps.length)d.appendChild(el('div',{class:'salesum'},[el('span',{},['Material ',el('b',{style:'color:var(--ink)',text:q(mat)})]),el('span',{},['Gramos ',el('b',{style:'color:var(--ink)',text:gr(g)+' g'})]),el('span',{},['Te queda ',el('b',{text:q(o.priceQ-mat)})])]));
+      var acts=el('div',{class:'row'});
+      if(!o.incomeId)acts.appendChild(el('button',{class:'btn',text:'Ya me pagaron',onclick:function(){chargeOrder(o).then(function(){toast('Cobro de '+q(o.priceQ)+' anotado')}).catch(fail)}}));
+      acts.appendChild(el('button',{class:'btn',text:o.status==='entregado'?'Volver a pendiente':'Marcar entregado',onclick:function(){db.doc('orders/'+o.id).update({status:o.status==='entregado'?'pend':'entregado'}).catch(fail)}}));
+      acts.appendChild(el('button',{class:'btn',text:'Editar',onclick:function(){ordAdd={id:o.id,name:o.name,desc:o.desc||'',price:String(o.priceQ),incomeId:o.incomeId};render();window.scrollTo(0,0)}}));
+      d.appendChild(acts);
+      d.appendChild(delBtn('Borrar pedido',function(){
+        var ch=Promise.resolve();if(o.incomeId)ch=ch.then(function(){return db.doc('incomes/'+o.incomeId).delete()});
+        ps.forEach(function(p){ch=ch.then(function(){return db.doc('prints/'+p.id).update({orderId:null})})});
+        ch.then(function(){return db.doc('orders/'+o.id).delete()}).then(function(){toast('Pedido borrado')}).catch(fail)}));
+      row.appendChild(d);
+    }
+    return row;
+  }
+  function vPedidos(root){
+    if(ordAdd){root.appendChild(ordForm());return}
+    root.appendChild(el('div',{class:'sec'},[el('h2',{text:'Tus pedidos'}),el('button',{class:'btn primary',text:'+ Pedido',onclick:function(){ordAdd={name:'',desc:'',price:''};render()}})]));
+    var pend=orders.filter(function(o){return o.status!=='entregado'});
+    var kp=el('div',{class:'stats2'});
+    kp.appendChild(statTile(String(pend.length),pend.length===1?'pedido pendiente':'pedidos pendientes','var(--o)'));
+    kp.appendChild(statTile(q(pend.filter(function(o){return !o.incomeId}).reduce(function(a,o){return a+(o.priceQ||0)},0)),'por cobrar','var(--g)'));
+    root.appendChild(kp);
+    root.appendChild(perChips(ordFil,function(v){ordFil=v},[['pend','Pendientes'],['entregado','Entregados'],['todo','Todos']]));
+    var list=orders.filter(function(o){return ordFil==='todo'||(ordFil==='pend'?o.status!=='entregado':o.status==='entregado')}).sort(function(a,b){return a.createdAt<b.createdAt?1:-1});
+    if(!list.length){root.appendChild(emptyBox(orders.length?'No hay pedidos aquí.':'Anota lo que te encarguen: qué es y en cuánto lo vas a vender. Luego, cuando imprimas, lo enlazas y el precio se pone solo.'));return}
+    var hl=el('div',{class:'hlist'});list.forEach(function(o){hl.appendChild(ordRow(o))});root.appendChild(hl);
   }
 
   // ================= Gastos =================
@@ -1520,6 +1660,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
   function hIcon(kind){
     var s=sv('svg',{viewBox:'0 0 24 24',width:22,height:22,fill:'none',stroke:'currentColor','stroke-width':2.6,'stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true'});
     if(kind==='imp'){s.appendChild(sv('path',{d:'M12 3l8 4.5v9L12 21l-8-4.5v-9z'}));s.appendChild(sv('path',{d:'M4 7.5l8 4.5 8-4.5M12 12v9'}))}
+    else if(kind==='ped'){s.appendChild(sv('path',{d:'M3 8l9-4 9 4v9l-9 4-9-4z'}));s.appendChild(sv('path',{d:'M3 8l9 4 9-4M12 12v9M7.5 6l9 4'}))}
     else if(kind==='gas'){s.appendChild(sv('path',{d:'M12 4v13M6 12l6 6 6-6'}))}
     else{s.appendChild(sv('path',{d:'M12 20V7M6 12l6-6 6 6'}))}
     return s;
@@ -1538,19 +1679,23 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     });
     var bits=[];if(d.fromPrinter)bits.push('Impresora '+d.fromPrinter);if(d.costQ>0)bits.push('Material '+q(d.costQ));bits.push(new Date(d.createdAt).toLocaleTimeString('es-GT',{hour:'2-digit',minute:'2-digit'}));
     box.appendChild(el('div',{class:'meta',text:bits.join(' · ')}));
-    if(d.saleQ>0){
+    var po=d.orderId&&orders.find(function(o){return o.id===d.orderId});
+    if(po){
+      box.appendChild(el('div',{class:'salesum'},[el('span',{},[hIcon('ped'),' ',el('b',{style:'color:var(--ink)',text:po.name})]),el('span',{},['Precio del pedido ',el('b',{text:q(po.priceQ)})]),
+        el('button',{type:'button',class:'btn',text:'Ver pedido',onclick:function(){ordOpen[po.id]=true;go('pedidos')}})]));
+    }else if(d.saleQ>0){
       box.appendChild(el('div',{class:'salesum'},[el('span',{},['Vendido en ',el('b',{text:q(d.saleQ)})]),d.costQ>0?el('span',{},['Te quedó ',el('b',{text:q(d.saleQ-d.costQ)}),' sobre el material']):null]));
     }else{
       box.appendChild(saleBox('p'+d.id));
-      box.appendChild(el('button',{class:'btn',type:'button',text:'Guardar venta',onclick:function(){
-        var v=saleOf('p'+d.id);if(v===null)return;if(!(v>0)){delete saleSt['p'+d.id];render();return}
-        var iref=db.collection('incomes').doc();
-        iref.set({concept:d.name||'Impresión',amountQ:v,date:ymd(new Date(d.createdAt)),createdAt:new Date().toISOString(),printId:d.id})
-          .then(function(){return db.doc('prints/'+d.id).update({saleQ:v,incomeId:iref.id})}).then(function(){delete saleSt['p'+d.id];toast('Venta de '+q(v)+' anotada')}).catch(fail)}}));
+      box.appendChild(el('button',{class:'btn',type:'button',text:'Guardar',onclick:function(){
+        var r=saleOf('p'+d.id);if(r===null)return;if(!r.orderId&&!(r.sale>0)){delete saleSt['p'+d.id];render();return}
+        saleCommit(r,d.name||'Impresión',ymd(new Date(d.createdAt)),d.id).then(function(f){return db.doc('prints/'+d.id).update(f)})
+          .then(function(){delete saleSt['p'+d.id];toast(r.orderId?'Enlazada al pedido':'Venta de '+q(r.sale)+' anotada')}).catch(fail)}}));
     }
     box.appendChild(delBtn('Borrar y devolver gramos',function(){
       var chain=Promise.resolve();
       if(d.incomeId)chain=chain.then(function(){return db.doc('incomes/'+d.incomeId).delete()});
+      if(po&&po.incomeId&&!prints.some(function(p){return p.id!==d.id&&p.orderId===po.id}))chain=chain.then(function(){return db.doc('incomes/'+po.incomeId).delete()}).then(function(){return db.doc('orders/'+po.id).update({incomeId:null})});
       (d.lines||[]).forEach(function(l){chain=chain.then(function(){var s=byId(l.spoolId);if(!s)return null;s.remainingG=Math.min(s.initialG,Math.round((s.remainingG+l.g)*100)/100);return db.doc('spools/'+s.id).update({remainingG:s.remainingG})})});
       chain.then(function(){return db.doc('prints/'+d.id).delete()}).then(function(){toast('Borrada, gramos devueltos')}).catch(fail)}));
     return box;
@@ -1560,7 +1705,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     var items=prints.slice().sort(function(a,b){return new Date(b.createdAt)-new Date(a.createdAt)});
     if(!items.length){root.appendChild(emptyBox('Todavía no has impreso nada. Cuando descuentes una impresión, queda aquí con sus colores.'));return}
     var pst=periodOf(periodEndFor(new Date())).start,inPer=items.filter(function(p){return ymd(new Date(p.createdAt))>=pst});
-    var vend=inPer.filter(function(p){return p.saleQ>0}),tot=vend.reduce(function(a,p){return a+p.saleQ},0);
+    var vend=inPer.filter(function(p){return p.saleQ>0||p.orderId}),tot=incomes.filter(function(x){return x.date>=pst}).reduce(function(a,x){return a+(x.amountQ||0)},0);
     root.appendChild(el('div',{class:'card salestat'},[
       el('div',{},[el('small',{text:'VENDIDO DESDE EL 16'}),el('b',{text:q(tot)})]),
       el('div',{},[el('small',{text:'IMPRESIONES'}),el('b',{text:String(inPer.length)})]),
@@ -1571,7 +1716,8 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
       if(dl!==lastDay){lastDay=dl;root.appendChild(el('div',{class:'dayh',text:dl}));list=el('div',{class:'hlist'});root.appendChild(list)}
       var id='p'+d.id,open=!!histOpen[id],n=(d.lines||[]).length;
       var row=el('div',{class:'hrow imp'+(open?' open':'')},[el('button',{type:'button',class:'hhead','aria-expanded':open?'true':'false',onclick:function(){histOpen[id]=!histOpen[id];render()}},[
-        el('span',{class:'hic'},[hIcon('imp')]),el('span',{class:'htx'},[el('b',{text:d.name||'Impresión'}),el('small',{text:n+(n===1?' color':' colores')+(d.fromPrinter?' · '+d.fromPrinter:'')})]),el('span',{class:'hamt pamt'},[el('span',{class:d.saleQ>0?'sold':'nos',text:d.saleQ>0?q(d.saleQ):'Sin precio'}),el('small',{text:gr(d.totalG||0)+' g'})])])]);
+        el('span',{class:'hic'},[hIcon('imp')]),el('span',{class:'htx'},[el('b',{text:d.name||'Impresión'}),el('small',{text:n+(n===1?' color':' colores')+(d.fromPrinter?' · '+d.fromPrinter:'')})]),(function(){var o=d.orderId&&orders.find(function(x){return x.id===d.orderId});
+        return el('span',{class:'hamt pamt'},[o?el('span',{class:'sold ord'},[hIcon('ped'),q(o.priceQ)]):el('span',{class:d.saleQ>0?'sold':'nos',text:d.saleQ>0?q(d.saleQ):'Sin precio'}),el('small',{text:(o?o.name+' · ':'')+gr(d.totalG||0)+' g'})])})()])]);
       if(open)row.appendChild(printDetail(d));
       list.appendChild(row);
     });
@@ -1632,7 +1778,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
           d.appendChild(r);
         });
       }
-      sec('QUÉ VENDÍ · '+q(c.ventas),'var(--ok)',c.vItems,'+',function(x){var pr=prints.find(function(p){return p.incomeId===x.id});db.doc('incomes/'+x.id).delete().then(function(){return pr?db.doc('prints/'+pr.id).update({saleQ:null,incomeId:null}):null}).then(function(){toast('Borrado')}).catch(fail)});
+      sec('QUÉ VENDÍ · '+q(c.ventas),'var(--ok)',c.vItems,'+',function(x){var pr=prints.find(function(p){return p.incomeId===x.id}),od=orders.find(function(o){return o.incomeId===x.id});db.doc('incomes/'+x.id).delete().then(function(){return pr?db.doc('prints/'+pr.id).update({saleQ:null,incomeId:null}):null}).then(function(){return od?db.doc('orders/'+od.id).update({incomeId:null}):null}).then(function(){toast('Borrado')}).catch(fail)});
       sec('QUÉ GASTÉ · '+q(c.gastos),'var(--bad)',c.gItems,'-',function(x){db.doc('expenses/'+x.id).delete().then(function(){if(x.ph)PH.del(x.ph);toast('Borrado')}).catch(fail)});
       d.appendChild(el('div',{class:'cuttot'},[el('span',{text:'GANANCIA'}),el('b',{style:'color:'+gcol,text:(c.ganancia<0?'-':'')+q(Math.abs(c.ganancia))})]));
       d.appendChild(el('div',{class:'meta',text:'Filamento usado: '+fmtG(c.gramos)+' en '+c.nImp+(c.nImp===1?' impresión':' impresiones')}));
@@ -1681,7 +1827,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     var root=$('view');root.textContent='';root.style.cssText='display:flex;flex-direction:column;gap:14px';
     if(render.last!==view){render.last=view;root.classList.add('anim');clearTimeout(render.t);render.t=setTimeout(function(){root.classList.remove('anim')},500)}
     if(!loaded){root.appendChild(emptyBox('Cargando tu taller…'));return}
-    if(view==='bobinas')vBobinas(root);else if(view==='imprimir'){root.appendChild(el('button',{class:'btn ghost',type:'button',text:'← Volver al historial',onclick:function(){go('historial')}}));vImprimir(root)}else if(view==='impresoras')vImpresoras(root);else if(view==='numeros')vNumeros(root);else if(view==='gastos')vGastos(root);else if(view==='historial')vHistorial(root);else if(view==='yo')vYo(root);else vBobinas(root);
+    if(view==='bobinas')vBobinas(root);else if(view==='imprimir'){root.appendChild(el('button',{class:'btn ghost',type:'button',text:'← Volver al historial',onclick:function(){go('historial')}}));vImprimir(root)}else if(view==='impresoras')vImpresoras(root);else if(view==='pedidos')vPedidos(root);else if(view==='numeros')vNumeros(root);else if(view==='gastos')vGastos(root);else if(view==='historial')vHistorial(root);else if(view==='yo')vYo(root);else vBobinas(root);
   }
   var soonT=null;
   function soon(){if(soonT)return;soonT=setTimeout(function(){soonT=null;var a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='SELECT')&&a.closest('#view'))return;render()},700)}
@@ -1692,13 +1838,13 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
   var h=location.hash.replace('#','');if(h==='dinero')h='historial';if(VIEWS.indexOf(h)>-1)view=h;
   window.addEventListener('hashchange',function(){var x=location.hash.replace('#','');if(VIEWS.indexOf(x)>-1&&x!==view){view=x;render()}});
 
-  var got={};var NEED=['spools','prints','printers','printerJobs','expenses','incomes','cortes'];
+  var got={};var NEED=['spools','prints','printers','printerJobs','expenses','incomes','cortes','orders'];
   function on(name,set){db.collection(name).onSnapshot(function(s){set(snap(s));got[name]=true;
     if(!loaded&&NEED.every(function(n){return got[n]})){loaded=true;boot()}
     if(loaded)cortesSoon();
     var a=document.activeElement;if(a&&(a.tagName==='INPUT')&&a.closest('#view'))return;render()})}
   on('spools',function(v){spools=v});on('prints',function(v){prints=v});
-  on('printers',function(v){printers=v});on('printerJobs',function(v){jobs=v});on('expenses',function(v){expenses=v});on('incomes',function(v){incomes=v});on('cortes',function(v){cortes=v});
+  on('printers',function(v){printers=v});on('printerJobs',function(v){jobs=v});on('expenses',function(v){expenses=v});on('incomes',function(v){incomes=v});on('cortes',function(v){cortes=v});on('orders',function(v){orders=v});
 
   setInterval(function(){cortesSoon()},3600000);
   var booted=false;
