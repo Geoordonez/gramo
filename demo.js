@@ -24,8 +24,10 @@
       var inc={i1:{concept:'50 llaveros Cross Nails',amountQ:650,date:iso(now-20*D).slice(0,10)},i2:{concept:'12 billetes de Bob Esponja',amountQ:720,date:iso(now-11*D).slice(0,10)},i3:{concept:'Lagartijas (6)',amountQ:360,date:iso(now-5*D).slice(0,10)},i4:{concept:'Llavero con logo (30)',amountQ:390,date:iso(now-1*D).slice(0,10)}};
       Object.keys(pr).forEach(function(k){var p=pr[k];if(rnd()<.25)return;var v=Math.round((p.totalG*(1.2+rnd()*1.6)+15)*100)/100;p.saleQ=v;p.incomeId='v'+k;inc['v'+k]={concept:p.name,amountQ:v,date:p.createdAt.slice(0,10),createdAt:p.createdAt,printId:k}});
       var ords={o1:{name:'Pedido 1',desc:'Llaveros corazón para boda, rojo con blanco, 10 unidades',priceQ:50,status:'pend',createdAt:iso(now-2*D),incomeId:null},o2:{name:'Pedido 2',desc:'6 billetes verdes para cumpleaños',priceQ:120,status:'pend',createdAt:iso(now-1*D),incomeId:null},o3:{name:'Logo Cross Nails',desc:'30 llaveros con logo',priceQ:390,status:'entregado',createdAt:iso(now-8*D),incomeId:null}};
+      var qts={q1:{num:11,title:'Boda de Ana y Luis',client:'María Fernanda López',days:8,items:[{name:'Llavero corazón personalizado',desc:'PLA Silk dorado, nombre grabado, argolla incluida',qty:50,price:8,photoId:null},{name:'Billete decorativo x6',desc:'Impresión multicolor, base incluida',qty:6,price:20,photoId:null},{name:'Caja de recuerdo con logo',desc:'Medidas 8 × 8 cm, tapa con relieve',qty:30,price:12.5,photoId:null}],disc:5,depOn:true,depPct:50,total:850.25,status:'enviada',date:iso(now-D).slice(0,10),createdAt:iso(now-D)}};
+      try{var yy=JSON.parse(localStorage.getItem('f3g-yo')||'{}');if(!yy.shop||yy.shop==='Mi taller')yy.shop='Taller Ejemplo 3D';yy.phone=yy.phone||'5555-0000';yy.ig=yy.ig||'tallerejemplo3d';localStorage.setItem('f3g-yo',JSON.stringify(yy))}catch(e){}
       var jobs={jdemo:{cloud:true,printerId:'',name:'Llaveros corazón x10',finishedAt:iso(now-20*60000),totalG:42.6,lines:[{g:28.4,color:'#C12E1F',label:'Red'},{g:14.2,color:'#FFFFFF',label:'Jade White'}],applied:false}};
-      localStorage.setItem(KEY,JSON.stringify({spools:sp,prints:pr,expenses:ex,incomes:inc,printerJobs:jobs,orders:ords}));
+      localStorage.setItem(KEY,JSON.stringify({spools:sp,prints:pr,expenses:ex,incomes:inc,printerJobs:jobs,orders:ords,quotes:qts}));
     }
   }catch(e){}
 })();
