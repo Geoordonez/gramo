@@ -1077,10 +1077,10 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     if(!ops.length)wrap.appendChild(el('div',{class:'meta',text:'Tip: en la pestaña Pedidos anotas lo que te encargan y aquí lo enlazas.'}));
     if(st.mode==='order'){
       wrap.appendChild(el('label',{class:st.orderId?'':'req'},['¿De qué pedido es? *',fancySelect({value:st.orderId,title:'Enlazar con un pedido',placeholder:'Elegir pedido…',
-        options:ops.map(function(o){return {value:o.id,label:o.name,sub:(o.desc?o.desc.slice(0,40)+' · ':'')+q(o.priceQ)+' · '+OST[ost(o)][0].toLowerCase()}}),
+        options:ops.map(function(o){return {value:o.id,label:o.name,sub:(o.desc?o.desc.slice(0,40)+' · ':'')+q(ordRest(o))+' · '+OST[ost(o)][0].toLowerCase()}}),
         onChange:function(v){st.orderId=v;render()}})]));
       var o=orders.find(function(x){return x.id===st.orderId});
-      if(o)wrap.appendChild(el('div',{class:'lockprice'},[el('span',{text:'Precio del pedido'}),el('b',{text:q(o.priceQ)}),
+      if(o)wrap.appendChild(el('div',{class:'lockprice'},[el('span',{text:ordDep(o)>0?'Falta cobrar (ya recibiste el anticipo)':'Precio del pedido'}),el('b',{text:q(ordRest(o))}),
         el('small',{text:'Se cambia solo en Pedidos. El dinero entra a tus números cuando marques el pedido como entregado.'})]));
       return wrap;
     }
@@ -1305,7 +1305,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
   }
   function orderLinkRow(pr){
     var cur=orders.find(function(o){return o.id===pr.linkOrderId});
-    var opts=orders.filter(function(o){return ost(o)!=='entregado'}).sort(function(a,b){return a.createdAt<b.createdAt?1:-1}).map(function(o){return {value:o.id,label:o.name,sub:q(o.priceQ)+' · '+OST[ost(o)][0].toLowerCase()}});
+    var opts=orders.filter(function(o){return ost(o)!=='entregado'}).sort(function(a,b){return a.createdAt<b.createdAt?1:-1}).map(function(o){return {value:o.id,label:o.name,sub:q(ordRest(o))+' · '+OST[ost(o)][0].toLowerCase()}});
     if(!opts.length&&!cur)return el('div',{class:'meta',text:'¿Esta impresión es de un pedido? Créalo en Pedidos y aquí lo enlazas.'});
     var sel=fancySelect({value:pr.linkOrderId||'',options:opts,title:'¿De qué pedido es esta impresión?',placeholder:'¿Es de un pedido? Enlázalo aquí',onChange:function(v){linkPrinterOrder(pr,v)}});
     var w=el('div',{class:'olink'},[el('div',{class:'meta',style:'font-weight:800',text:'Pedido de esta impresión'}),sel]);
@@ -2072,7 +2072,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     var row=el('div',{class:'hrow ped'+(open?' open':'')},[el('button',{type:'button',class:'hhead','aria-expanded':open?'true':'false',onclick:function(){ordOpen[o.id]=!open;render()}},[
       el('span',{class:'hic'},[hIcon('ped')]),
       el('span',{class:'htx'},[el('b',{text:o.name}),el('small',{text:(o.desc?o.desc:'Sin descripción')})]),
-      el('span',{class:'hamt pamt'},[el('span',{text:q(o.priceQ)}),el('small',{class:'obadge '+badge[1],text:badge[0]})])])]);
+      el('span',{class:'hamt pamt'},[el('span',{text:q(ost(o)==='entregado'?o.priceQ:ordRest(o))}),el('small',{class:'obadge '+badge[1],text:badge[0]})])])]);
     if(open){
       var d=el('div',{class:'hdet'});
       if(o.desc)d.appendChild(el('div',{class:'odesc',text:o.desc}));
