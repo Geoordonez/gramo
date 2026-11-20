@@ -390,6 +390,21 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
 .pdfview img{width:100%;max-width:560px;height:auto;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.5);background:#fff}
 .pdfbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;justify-content:center;padding:12px;background:#161616;border-top:3px solid var(--y)}
 
+/* Selector grande Pedidos | Cotizaciones */
+.bigseg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bigseg .bs{display:flex;align-items:center;justify-content:center;gap:8px;min-height:58px;padding:8px 6px;border:3px solid var(--edge);border-radius:16px;background:var(--card);color:var(--ink);font:800 17px var(--font);cursor:pointer;box-shadow:3px 3px 0 var(--edge)}
+.bigseg .bs.on{background:var(--y);color:#161616;box-shadow:5px 5px 0 var(--edge)}
+.bigseg .bs svg{width:24px;height:24px;flex:none}
+.bigseg em{font-style:normal;font-size:13px;font-weight:800;background:rgba(127,127,127,.28);border-radius:10px;padding:1px 8px}
+/* Estados: solo se ven */
+.ostep{cursor:default}
+/* Enlace de pedido en la impresora */
+.olink{display:grid;gap:8px;padding:10px;border:3px dashed var(--soft);border-radius:14px}
+/* Confirmación */
+.cbox{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.cbox-card{width:min(440px,100%);margin-bottom:max(14px,env(safe-area-inset-bottom,0px));background:var(--paper);color:var(--ink);border:3px solid var(--edge);border-radius:20px;padding:18px;display:grid;gap:12px;box-shadow:6px 6px 0 var(--y)}
+.cbox-card h3{font-size:22px;letter-spacing:-.4px}
+
 </style></head><body>
 <div class="wrap">
   <div class="hello">
@@ -491,6 +506,16 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
   function normHex(c){if(!c)return null;c=String(c).replace('#','');return c.length>=6?'#'+c.slice(0,6).toLowerCase():null}
   function colorDist(a,b){var x=[1,3,5].map(function(i){return parseInt(a.substr(i,2),16)-parseInt(b.substr(i,2),16)});return x[0]*x[0]+x[1]*x[1]+x[2]*x[2]}
   function startLive(){}
+  // Si enlazaste esta impresión a un pedido mientras se imprimía, al terminar el pedido pasa solo a "Listo para entregar"
+  function linkJob(jr,deviceId,failed){
+    var pr0=printers.find(function(p){return p.id===deviceId});
+    var o=pr0&&pr0.linkOrderId&&orders.find(function(x){return x.id===pr0.linkOrderId&&x.status!=='entregado'});
+    if(!o)return;
+    jr.orderId=o.id;
+    if(failed)return;
+    db.doc('orders/'+o.id).update({status:'listo'});
+    db.doc('printers/'+deviceId).update({linkOrderId:null});
+  }
   function cloudSync(){
     if(!cloud||!cloud.token||cloudSyncing||!loaded)return;
     cloudSyncing=true;var tok=cloud.token;
@@ -532,8 +557,9 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
         var map=Array.isArray(t.amsDetailMapping)?t.amsDetailMapping.filter(function(m){return m&&parseFloat(m.weight)>0}):[];
         var lines=map.length?map.map(function(m){return {g:Math.round(parseFloat(m.weight)*10)/10,color:normHex(m.targetColor||m.sourceColor),label:m.filamentType||''}})
           :[{g:Math.round((parseFloat(t.weight)||0)*10)/10,color:null,label:''}];
-        db.doc('printerJobs/'+jid).set({cloud:true,printerId:t.deviceId||'',name:t.title||t.designTitle||'Impresión',finishedAt:new Date(end).toISOString(),
-          failed:failed,totalG:parseFloat(t.weight)||0,lines:lines,applied:false});made++;
+        var jr={cloud:true,printerId:t.deviceId||'',name:t.title||t.designTitle||'Impresión',finishedAt:new Date(end).toISOString(),
+          failed:failed,totalG:parseFloat(t.weight)||0,lines:lines,applied:false};
+        linkJob(jr,t.deviceId,failed);db.doc('printerJobs/'+jid).set(jr);made++;
       });
       cloud.last=new Date().toISOString();cloud.err='';saveCloud();
       if(made)toast(made===1?'Hay 1 impresión nueva por descontar':'Hay '+made+' impresiones nuevas por descontar');
@@ -1077,12 +1103,13 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     return {sale:Math.round(v*100)/100,orderId:''};
   }
   // Anota el cobro (venta suelta o del pedido) y devuelve los campos para la impresión
-  function saleCommit(r,name,date,pid){
+  function saleCommit(r,name,date,pid,failed){
     var now=new Date().toISOString();
     if(r.orderId){
       var o=orders.find(function(x){return x.id===r.orderId});if(!o)return Promise.resolve({});
-      if(ost(o)==='pend')return db.doc('orders/'+o.id).update({status:'imprimiendo'}).then(function(){return {orderId:o.id}});
-      return Promise.resolve({orderId:o.id});
+      var st0=ost(o),nx=null;
+      if(failed){if(st0==='pend')nx='imprimiendo'}else if(st0==='pend'||st0==='imprimiendo')nx='listo';
+      return (nx?db.doc('orders/'+o.id).update({status:nx}):Promise.resolve()).then(function(){return {orderId:o.id}});
     }
     if(r.sale>0){var iref=db.collection('incomes').doc();
       return iref.set({concept:name,amountQ:r.sale,date:date,createdAt:now,printId:pid}).then(function(){return {saleQ:r.sale,incomeId:iref.id}})}
@@ -1099,7 +1126,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     if(extra)for(var k in extra)rec[k]=extra[k];
     items.forEach(function(it){var s=byId(it.spoolId);rec.totalG=Math.round((rec.totalG+it.g)*100)/100;rec.costQ=Math.round((rec.costQ+costG(s)*it.g)*100)/100;rec.lines.push({spoolId:s.id,label:s.name,colorHex:s.colorHex,g:it.g})});
     var pref=db.collection('prints').doc();
-    var chain=saleCommit(r,rec.name,todayStr(),pref.id).then(function(f){for(var k in f)rec[k]=f[k];return pref.set(rec)});
+    var chain=saleCommit(r,rec.name,todayStr(),pref.id,!!rec.failed).then(function(f){for(var k in f)rec[k]=f[k];return pref.set(rec)});
     items.forEach(function(it){chain=chain.then(function(){var s=byId(it.spoolId);s.remainingG=Math.max(0,Math.round((s.remainingG-it.g)*100)/100);return db.doc('spools/'+s.id).update({remainingG:s.remainingG})})});
     return chain.then(function(){if(saleKey)delete saleSt[saleKey];if(!extra){lines=[{spoolId:'',g:''}];go('historial')}var lo=r.orderId&&orders.find(function(o){return o.id===r.orderId});toast(lo?'¡Listo! Enlazada a '+lo.name:sale>0?'¡Listo! Descontado y venta de '+q(sale)+' anotada':'¡Listo! Ya lo descontamos');render();return true}).catch(function(e){fail(e);return false});
   }
@@ -1276,6 +1303,29 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     b.style.setProperty('--sc',s?shadowFor(s.colorHex):'var(--edge)');
     return b;
   }
+  function orderLinkRow(pr){
+    var cur=orders.find(function(o){return o.id===pr.linkOrderId});
+    var opts=orders.filter(function(o){return ost(o)!=='entregado'}).sort(function(a,b){return a.createdAt<b.createdAt?1:-1}).map(function(o){return {value:o.id,label:o.name,sub:q(o.priceQ)+' · '+OST[ost(o)][0].toLowerCase()}});
+    if(!opts.length&&!cur)return el('div',{class:'meta',text:'¿Esta impresión es de un pedido? Créalo en Pedidos y aquí lo enlazas.'});
+    var sel=fancySelect({value:pr.linkOrderId||'',options:opts,title:'¿De qué pedido es esta impresión?',placeholder:'¿Es de un pedido? Enlázalo aquí',onChange:function(v){linkPrinterOrder(pr,v)}});
+    var w=el('div',{class:'olink'},[el('div',{class:'meta',style:'font-weight:800',text:'Pedido de esta impresión'}),sel]);
+    if(cur){
+      w.appendChild(el('div',{class:'meta',text:'Cuando termine, '+cur.name+' pasa solo a "Listo para entregar".'}));
+      w.appendChild(el('button',{type:'button',class:'btn ghost',text:'Quitar enlace',onclick:function(){unlinkPrinterOrder(pr,cur)}}));
+    }
+    return w;
+  }
+  function linkPrinterOrder(pr,oid){
+    var o=orders.find(function(x){return x.id===oid});if(!o)return;
+    var ch=db.doc('printers/'+pr.id).update({linkOrderId:oid}),st=ost(o);
+    if(st==='pend'||st==='listo')ch=ch.then(function(){return db.doc('orders/'+oid).update({status:'imprimiendo'})});
+    ch.then(function(){toast('Enlazada a '+o.name+': ahora está Imprimiendo')}).catch(fail);
+  }
+  function unlinkPrinterOrder(pr,o){
+    var ch=db.doc('printers/'+pr.id).update({linkOrderId:null});
+    if(ost(o)==='imprimiendo')ch=ch.then(function(){return db.doc('orders/'+o.id).update({status:ordPrints(o).length?'listo':'pend'})});
+    ch.then(function(){toast('Enlace quitado')}).catch(fail);
+  }
   function printerCard(pr){
     var st=statusOf(pr), busy=st.cls==='busy', L=live[pr.id]||{};
     var card=el('div',{class:'card'},[el('div',{class:'printer'},[printerSvg(busy),el('div',{},[
@@ -1285,6 +1335,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
       card.appendChild(el('div',{class:'hist'},[el('div',{class:'head'},[el('span',{text:L.subtask_name||'Imprimiendo'}),el('span',{class:'bigpct',text:(L.mc_percent||0)+'%'})]),
         segBar(L.mc_percent||0),L.mc_remaining_time!=null?el('div',{class:'meta',text:'Faltan '+L.mc_remaining_time+' min'}):null]));
     }
+    if(busy)card.appendChild(orderLinkRow(pr));
     if(busy&&L.mc_percent==null){var cc=conn.cloud||{};card.appendChild(el('div',{class:'meta',text:cc.state==='connected'?'Esperando el avance de la impresora…':cc.state==='auth'||cc.state==='error'?'No pude abrir el avance en vivo ('+(cc.msg||'sin detalle')+'). Sigo viendo el estado.':'Conectando con el avance en vivo…'}))}
     card.appendChild(el('div',{class:'meta',text:'¿Qué bobina tiene puesta cada ranura?'}));
     var grid=el('div',{class:'slots'});(pr.slots||[]).forEach(function(_,i){grid.appendChild(slotPicker(pr,i))});
@@ -1292,6 +1343,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     return card;
   }
   function cloudJobCard(j){
+    if(j.orderId&&!saleSt['j'+j.id])saleSt['j'+j.id]={mode:'order',orderId:j.orderId,price:'',none:false};
     var pr=printers.find(function(p){return p.id===j.printerId})||{name:'Impresora',slots:[]};
     var assigned=(pr.slots||[]).map(function(s){return byId(s.spoolId)}).filter(Boolean);
     var rows=(j.lines||[]).map(function(l){
@@ -1317,7 +1369,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
       saleBox('j'+j.id),
       el('div',{class:'row'},[
         el('button',{class:'btn primary',text:'Confirmar',onclick:function(){
-          submitPrint(j.name||'Impresión',rows.map(function(r){return {spoolId:r.spoolId,g:r.g}}),{fromPrinter:pr.name,cloud:true},'j'+j.id).then(function(ok){if(ok)db.doc('printerJobs/'+j.id).update({applied:true})})}}),
+          submitPrint(j.name||'Impresión',rows.map(function(r){return {spoolId:r.spoolId,g:r.g}}),{fromPrinter:pr.name,cloud:true,failed:!!j.failed},'j'+j.id).then(function(ok){if(ok)db.doc('printerJobs/'+j.id).update({applied:true})})}}),
         el('button',{class:'btn ghost',text:'Ignorar',onclick:function(){db.doc('printerJobs/'+j.id).update({applied:true})}})])]);
   }
   function vNube(root){
@@ -1372,6 +1424,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
   }
   function jobCard(j){
     if(j.cloud)return cloudJobCard(j);
+    if(j.orderId&&!saleSt['j'+j.id])saleSt['j'+j.id]={mode:'order',orderId:j.orderId,price:'',none:false};
     var pr=printers.find(function(p){return p.id===j.printerId})||{name:'Impresora',slots:[]};
     var base=(j.lines&&j.lines.length)?j.lines:(pr.slots||[]).filter(function(s){return s.spoolId}).map(function(s){return {slotKey:s.key,g:0}});
     var rows=base.map(function(l){var sl=(pr.slots||[]).find(function(x){return x.key===l.slotKey});return {spoolId:sl?sl.spoolId:'',slot:sl?sl.label:l.slotKey,g:l.g||''}});
@@ -1603,6 +1656,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
   }
   function qtForm(){
     var S=qtAdd,f=el('form',{class:'card'});
+    f.appendChild(el('button',{type:'button',class:'btn ghost',text:'← Volver',onclick:function(){qtAdd=null;render()}}));
     f.appendChild(el('h2',{text:S.id?'Editar cotización':'Nueva cotización'}));
     var ti=el('input',{placeholder:'Ej. Boda de Ana y Luis, Promocionales, Venta…',maxlength:'60',value:S.title,'aria-label':'Título de la cotización'});ti.addEventListener('input',function(){S.title=ti.value});
     var cl=el('input',{class:'imp',placeholder:'Nombre de quien cotizas',maxlength:'60',value:S.client,'aria-label':'Nombre del cliente'});cl.addEventListener('input',function(){S.client=cl.value});
@@ -1935,6 +1989,22 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     if(st!=='entregado'&&o.incomeId){var old=o.incomeId;upd.incomeId=null;ch=db.doc('incomes/'+old).delete()}
     return ch.then(function(){return db.doc('orders/'+o.id).update(upd)});
   }
+  function bigSeg(){
+    var w=el('div',{class:'bigseg',role:'tablist'});
+    var nP=orders.filter(function(o){return ost(o)!=='entregado'}).length,nC=quotes.filter(function(x){return qst(x)==='nueva'||qst(x)==='enviada'}).length;
+    [['ped','Pedidos','ped',nP],['cot','Cotizaciones','cot',nC]].forEach(function(o){
+      w.appendChild(el('button',{type:'button',role:'tab','aria-selected':ordTab===o[0]?'true':'false',class:'bs'+(ordTab===o[0]?' on':''),onclick:function(){ordTab=o[0];render()}},[hIcon(o[2]),el('span',{text:o[1]}),el('em',{text:String(o[3])})]));
+    });
+    return w;
+  }
+  function confirmBox(title,msg,yes,onYes){
+    var ov=el('div',{class:'cbox',role:'dialog','aria-modal':'true','aria-label':title});
+    function close(){ov.remove()}
+    ov.appendChild(el('div',{class:'cbox-card'},[el('h3',{text:title}),el('div',{class:'meta',text:msg}),
+      el('div',{class:'row'},[el('button',{type:'button',class:'btn primary',text:yes||'Sí',onclick:function(){close();onYes()}}),el('button',{type:'button',class:'btn',text:'No',onclick:close})])]));
+    ov.addEventListener('click',function(e){if(e.target===ov)close()});
+    document.body.appendChild(ov);
+  }
   var migrated=false;
   function migrateOrders(){
     if(migrated||!got.prints||!got.incomes)return;migrated=true;
@@ -1945,6 +2015,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
   function ordPrints(o){return prints.filter(function(p){return p.orderId===o.id}).sort(function(a,b){return a.createdAt<b.createdAt?-1:1})}
   function ordForm(){
     var S=ordAdd,f=el('form',{class:'card'});
+    f.appendChild(el('button',{type:'button',class:'btn ghost',text:'← Volver',onclick:function(){ordAdd=null;render()}}));
     f.appendChild(el('h2',{text:S.id?'Editar pedido':'Nuevo pedido'}));
     var nm=el('input',{required:'',placeholder:'Ej. Pedido '+(orders.length+1),value:S.name});nm.addEventListener('input',function(){S.name=nm.value});
     var ds=el('textarea',{rows:'3',placeholder:'Ej. 50 llaveros Cross Nails, rosado con blanco, para el viernes'});ds.value=S.desc;ds.addEventListener('input',function(){S.desc=ds.value});
@@ -1977,16 +2048,23 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
       ps.forEach(function(p){var dots=el('span',{class:'fdots'});(p.lines||[]).forEach(function(l){var i=el('i');i.style.background=l.colorHex||'var(--line)';dots.appendChild(i)});
         d.appendChild(el('div',{class:'oprint'},[dots,el('span',{text:p.name||'Impresión'}),el('small',{text:new Date(p.createdAt).toLocaleDateString('es-GT',{day:'numeric',month:'short'})+' · '+gr(p.totalG||0)+' g'})]))});
       if(ps.length)d.appendChild(el('div',{class:'salesum'},[el('span',{},['Material ',el('b',{style:'color:var(--ink)',text:q(mat)})]),el('span',{},['Gramos ',el('b',{style:'color:var(--ink)',text:gr(g)+' g'})]),el('span',{},['Te queda ',el('b',{text:q(o.priceQ-mat)})])]));
-      // Pasos del pedido
+      // Los estados pasan solos. Lo único que tú controlas es "Entregado", con confirmación
       var cur=ost(o),order=['pend','imprimiendo','listo','entregado'],ci=order.indexOf(cur);
       var steps=el('div',{class:'osteps'});
-      order.forEach(function(k,i){steps.appendChild(el('button',{type:'button',class:'ostep '+OST[k][1]+(i<=ci?' on':'')+(i===ci?' cur':''),onclick:function(){
-        if(k===cur)return;setOrderStatus(o,k).then(function(){toast(k==='entregado'?'¡Entregado! '+q(o.priceQ)+' sumados a tu saldo':cur==='entregado'?'Volvió a '+OST[k][0].toLowerCase()+'; quité la venta':'Ahora: '+OST[k][0])}).catch(fail)}},[el('i',{text:String(i+1)}),el('span',{text:OST[k][0]})]))});
+      order.forEach(function(k,i){steps.appendChild(el('div',{class:'ostep '+OST[k][1]+(i<=ci?' on':'')+(i===ci?' cur':'')},[el('i',{text:String(i+1)}),el('span',{text:OST[k][0]})]))});
       d.appendChild(steps);
-      var nxt={pend:null,imprimiendo:['listo','Ya terminé de imprimir'],listo:['entregado','Ya lo entregué'],entregado:null}[cur];
-      d.appendChild(el('div',{class:'meta',text:cur==='entregado'?'Entregado: sus '+q(o.priceQ)+' ya están en tu saldo, tus números y tu historial.':cur==='pend'?'Cuando confirmes una impresión enlazada a este pedido, pasa solo a Imprimiendo.':'El dinero entra a tu saldo hasta que lo marques Entregado.'}));
+      d.appendChild(el('div',{class:'meta',text:{
+        pend:'Pasa solo a Imprimiendo cuando enlaces una impresión a este pedido.',
+        imprimiendo:'Pasa solo a Listo para entregar cuando termine de imprimirse.',
+        listo:'Cuando se lo des al cliente, márcalo como entregado. Ahí su dinero entra a tu saldo.',
+        entregado:'Entregado: sus '+q(o.priceQ)+' ya están en tu saldo, tus números y tu historial.'}[cur]}));
       var acts=el('div',{class:'row'});
-      if(nxt)acts.appendChild(el('button',{class:'btn primary',text:nxt[1],onclick:function(){setOrderStatus(o,nxt[0]).then(function(){toast(nxt[0]==='entregado'?'¡Entregado! '+q(o.priceQ)+' sumados a tu saldo':'Listo para entregar')}).catch(fail)}}));
+      if(cur==='listo')acts.appendChild(el('button',{class:'btn primary',text:'Marcar como entregado',onclick:function(){
+        confirmBox('¿Ya fue entregado?','Confirma que "'+o.name+'" ya se lo diste al cliente. Se suman '+q(o.priceQ)+' a tu saldo, a tus números y a tu historial.','Sí, ya se entregó',function(){
+          setOrderStatus(o,'entregado').then(function(){toast('¡Entregado! '+q(o.priceQ)+' sumados a tu saldo')}).catch(fail)})}}));
+      if(cur==='entregado')acts.appendChild(el('button',{class:'btn',text:'Quitar entregado',onclick:function(){
+        confirmBox('¿Quitar el entregado?','El pedido vuelve a "Listo para entregar" y se quita su venta de '+q(o.priceQ)+' de tus números.','Sí, quitar',function(){
+          setOrderStatus(o,'listo').then(function(){toast('Volvió a Listo para entregar')}).catch(fail)})}}));
       acts.appendChild(el('button',{class:'btn',text:'Editar',onclick:function(){ordAdd={id:o.id,name:o.name,desc:o.desc||'',price:String(o.priceQ),incomeId:o.incomeId};render();window.scrollTo(0,0)}}));
       d.appendChild(acts);
       d.appendChild(delBtn('Borrar pedido',function(){
@@ -2000,7 +2078,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
   function vPedidos(root){
     if(ordAdd){root.appendChild(ordForm());return}
     if(qtAdd){root.appendChild(qtForm());return}
-    root.appendChild(perChips(ordTab,function(v){ordTab=v},[['ped','Pedidos'],['cot','Cotizaciones']]));
+    root.appendChild(bigSeg());
     if(ordTab==='cot'){vCotizaciones(root);return}
     root.appendChild(el('div',{class:'sec'},[el('h2',{text:'Tus pedidos'}),el('button',{class:'btn primary',text:'+ Pedido',onclick:function(){ordAdd={name:'',desc:'',price:''};render()}})]));
     var act=orders.filter(function(o){return ost(o)!=='entregado'});
@@ -2135,7 +2213,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
       box.appendChild(saleBox('p'+d.id));
       box.appendChild(el('button',{class:'btn',type:'button',text:'Guardar',onclick:function(){
         var r=saleOf('p'+d.id);if(r===null)return;if(!r.orderId&&!(r.sale>0)){delete saleSt['p'+d.id];render();return}
-        saleCommit(r,d.name||'Impresión',ymd(new Date(d.createdAt)),d.id).then(function(f){return db.doc('prints/'+d.id).update(f)})
+        saleCommit(r,d.name||'Impresión',ymd(new Date(d.createdAt)),d.id,!!d.failed).then(function(f){return db.doc('prints/'+d.id).update(f)})
           .then(function(){delete saleSt['p'+d.id];toast(r.orderId?'Enlazada al pedido':'Venta de '+q(r.sale)+' anotada')}).catch(fail)}}));
     }
     box.appendChild(delBtn('Borrar y devolver gramos',function(){
