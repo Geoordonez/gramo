@@ -1060,7 +1060,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
   function updNote(){var n=$('pnote');if(!n)return;var msg=[];
     lines.forEach(function(l){var s=byId(l.spoolId),gr=parseFloat(l.g)||0;if(s&&gr>s.remainingG)msg.push('A "'+s.name+'" solo le quedan '+gr(s.remainingG)+' g.')});
     var c=lineCost(),tot=lines.reduce(function(a,l){return a+(parseFloat(l.g)||0)},0);
-    n.textContent=(msg.join(' ')+(tot>0?' Total '+gr(tot)+' g'+(c>0?' · material '+q(c):''):'')).trim();
+    n.textContent=(msg.join(' ')+(tot>0?' Total '+gr(tot)+' g'+'':'')).trim();
   }
   // Caja "¿A cuánto lo vendiste?" que se pide en cada impresión
   var saleSt={};
@@ -1122,9 +1122,9 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     var r=saleKey?saleOf(saleKey):{sale:0,orderId:''};
     if(r===null)return Promise.resolve(false);
     var sale=r.sale;
-    var rec={name:name||'Impresión',createdAt:new Date().toISOString(),totalG:0,costQ:0,lines:[]};
+    var rec={name:name||'Impresión',createdAt:new Date().toISOString(),totalG:0,lines:[]};
     if(extra)for(var k in extra)rec[k]=extra[k];
-    items.forEach(function(it){var s=byId(it.spoolId);rec.totalG=Math.round((rec.totalG+it.g)*100)/100;rec.costQ=Math.round((rec.costQ+costG(s)*it.g)*100)/100;rec.lines.push({spoolId:s.id,label:s.name,colorHex:s.colorHex,g:it.g})});
+    items.forEach(function(it){var s=byId(it.spoolId);rec.totalG=Math.round((rec.totalG+it.g)*100)/100;rec.lines.push({spoolId:s.id,label:s.name,colorHex:s.colorHex,g:it.g})});
     var pref=db.collection('prints').doc();
     var chain=saleCommit(r,rec.name,todayStr(),pref.id,!!rec.failed).then(function(f){for(var k in f)rec[k]=f[k];return pref.set(rec)});
     items.forEach(function(it){chain=chain.then(function(){var s=byId(it.spoolId);s.remainingG=Math.max(0,Math.round((s.remainingG-it.g)*100)/100);return db.doc('spools/'+s.id).update({remainingG:s.remainingG})})});
@@ -2035,7 +2035,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
     return f;
   }
   function ordRow(o){
-    var ps=ordPrints(o),open=!!ordOpen[o.id],g=ps.reduce(function(a,p){return a+(p.totalG||0)},0),mat=ps.reduce(function(a,p){return a+(p.costQ||0)},0);
+    var ps=ordPrints(o),open=!!ordOpen[o.id],g=ps.reduce(function(a,p){return a+(p.totalG||0)},0);
     var badge=OST[ost(o)];
     var row=el('div',{class:'hrow ped'+(open?' open':'')},[el('button',{type:'button',class:'hhead','aria-expanded':open?'true':'false',onclick:function(){ordOpen[o.id]=!open;render()}},[
       el('span',{class:'hic'},[hIcon('ped')]),
@@ -2047,7 +2047,7 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
       d.appendChild(el('div',{class:'meta',style:'font-weight:800',text:ps.length?'Impresiones enlazadas ('+ps.length+')':'Todavía no has enlazado impresiones. Al confirmar una impresión, toca "Enlazar pedido".'}));
       ps.forEach(function(p){var dots=el('span',{class:'fdots'});(p.lines||[]).forEach(function(l){var i=el('i');i.style.background=l.colorHex||'var(--line)';dots.appendChild(i)});
         d.appendChild(el('div',{class:'oprint'},[dots,el('span',{text:p.name||'Impresión'}),el('small',{text:new Date(p.createdAt).toLocaleDateString('es-GT',{day:'numeric',month:'short'})+' · '+gr(p.totalG||0)+' g'})]))});
-      if(ps.length)d.appendChild(el('div',{class:'salesum'},[el('span',{},['Material ',el('b',{style:'color:var(--ink)',text:q(mat)})]),el('span',{},['Gramos ',el('b',{style:'color:var(--ink)',text:gr(g)+' g'})]),el('span',{},['Te queda ',el('b',{text:q(o.priceQ-mat)})])]));
+      if(ps.length)d.appendChild(el('div',{class:'salesum'},[el('span',{},['Impresiones ',el('b',{style:'color:var(--ink)',text:String(ps.length)})]),el('span',{},['Gramos ',el('b',{style:'color:var(--ink)',text:gr(g)+' g'})])]));
       // Los estados pasan solos. Lo único que tú controlas es "Entregado", con confirmación
       var cur=ost(o),order=['pend','imprimiendo','listo','entregado'],ci=order.indexOf(cur);
       var steps=el('div',{class:'osteps'});
@@ -2201,14 +2201,14 @@ input.imp{border-color:var(--bad);box-shadow:3px 3px 0 var(--bad)}
       var s=byId(l.spoolId);
       box.appendChild(el('div',{class:'brow'},[el('b',{text:l.label||'Bobina'}),el('span',{class:'meta',text:gr(l.g)+' g'+(s&&s.material?' · '+s.material:'')}),tr]));
     });
-    var bits=[];if(d.fromPrinter)bits.push('Impresora '+d.fromPrinter);if(d.costQ>0)bits.push('Material '+q(d.costQ));bits.push(new Date(d.createdAt).toLocaleTimeString('es-GT',{hour:'2-digit',minute:'2-digit'}));
+    var bits=[];if(d.fromPrinter)bits.push('Impresora '+d.fromPrinter);bits.push(new Date(d.createdAt).toLocaleTimeString('es-GT',{hour:'2-digit',minute:'2-digit'}));
     box.appendChild(el('div',{class:'meta',text:bits.join(' · ')}));
     var po=d.orderId&&orders.find(function(o){return o.id===d.orderId});
     if(po){
       box.appendChild(el('div',{class:'salesum'},[el('span',{},[hIcon('ped'),' ',el('b',{style:'color:var(--ink)',text:po.name})]),el('span',{},['Precio del pedido ',el('b',{text:q(po.priceQ)})]),el('span',{class:'obadge '+OST[ost(po)][1],text:OST[ost(po)][0]}),
         el('button',{type:'button',class:'btn',text:'Ver pedido',onclick:function(){ordOpen[po.id]=true;go('pedidos')}})]));
     }else if(d.saleQ>0){
-      box.appendChild(el('div',{class:'salesum'},[el('span',{},['Vendido en ',el('b',{text:q(d.saleQ)})]),d.costQ>0?el('span',{},['Te quedó ',el('b',{text:q(d.saleQ-d.costQ)}),' sobre el material']):null]));
+      box.appendChild(el('div',{class:'salesum'},[el('span',{},['Vendido en ',el('b',{text:q(d.saleQ)})])]));
     }else{
       box.appendChild(saleBox('p'+d.id));
       box.appendChild(el('button',{class:'btn',type:'button',text:'Guardar',onclick:function(){
